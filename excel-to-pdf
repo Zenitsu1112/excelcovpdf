@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Excel to PDF Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Client-side Unzipper & Direct PDF Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* Full responsiveness for mobile & desktop */
+    body {
+      background: linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)),
+                  url('StarryNightCampsite.jpg') no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 3px solid #ffffff;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    /* Hidden rendering container */
+    #renderContainer {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      width: 1100px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 font-sans">
+
+  <!-- Glassmorphism Container to look sharp over the image -->
+  <div class="bg-white/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl shadow-2xl border border-white/20 max-w-lg w-full text-center">
+    
+    <!-- Icon -->
+    <div id="iconBox" class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    </div>
+
+    <h1 class="text-2xl font-black text-slate-900 tracking-tight">Portal Excel to PDF</h1>
+    <p class="text-sm text-slate-500 mt-1 mb-6">Converts portal exports (.xlsx) safely bypassing XML NaN errors</p>
+
+    <!-- Upload Box -->
+    <div class="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-5 bg-slate-50/50 hover:bg-blue-50/30 transition cursor-pointer mb-4" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept=".xlsx" class="hidden" />
+      <div id="fileNameLabel" class="text-xs text-slate-600 font-medium">
+        Click to select or drag & drop <code class="text-blue-600">.xlsx</code>
+      </div>
+      <div class="text-[11px] text-slate-400 mt-1">Supports e-Vidyavahini & HRMS spreadsheet exports</div>
+    </div>
+
+    <!-- Action Button -->
+    <button id="actionBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
+      <div id="spinner" class="spinner hidden"></div>
+      <span id="btnIcon">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </span>
+      <span id="btnText">Convert to PDF</span>
+    </button>
+
+    <!-- Status Subtitle -->
+    <div id="statusMessage" class="text-xs font-medium mt-3 hidden"></div>
+  </div>
+
+  <!-- Hidden HTML sandbox for PDF generation -->
+  <div id="renderContainer"></div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fileNameLabel = document.getElementById('fileNameLabel');
+    const actionBtn = document.getElementById('actionBtn');
+    const btnText = document.getElementById('btnText');
+    const btnIcon = document.getElementById('btnIcon');
+    const spinner = document.getElementById('spinner');
+    const statusMessage = document.getElementById('statusMessage');
+    const iconBox = document.getElementById('iconBox');
+    const renderContainer = document.getElementById('renderContainer');
+
+    let pdfBlobUrl = null;
+    let targetFileName = "Converted_Report.pdf";
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        fileNameLabel.innerHTML = `Selected: <b class="text-slate-800">${fileInput.files[0].name}</b>`;
+        resetToConvertState();
+      }
+    });
+
+    function resetToConvertState() {
+      pdfBlobUrl = null;
+      actionBtn.disabled = false;
+      actionBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2";
+      iconBox.className = "w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors duration-300";
+      btnText.textContent = "Convert to PDF";
+      spinner.classList.add('hidden');
+      btnIcon.classList.remove('hidden');
+      btnIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`;
+      statusMessage.classList.add('hidden');
+    }
+
+    actionBtn.addEventListener('click', async () => {
+      if (pdfBlobUrl) {
+        const a = document.createElement('a');
+        a.href = pdfBlobUrl;
+        a.download = targetFileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Please select a valid .xlsx file first.");
+        return;
+      }
+
+      // Loading State
+      actionBtn.disabled = true;
+      actionBtn.className = "w-full bg-slate-400 text-white font-semibold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-not-allowed";
+      spinner.classList.remove('hidden');
+      btnIcon.classList.add('hidden');
+      btnText.textContent = "Processing file... Please wait";
+      statusMessage.className = "text-xs font-medium mt-3 text-slate-500 block";
+      statusMessage.textContent = "Bypassing NaN XML tags & rendering PDF canvas...";
+
+      try {
+        const zip = await JSZip.loadAsync(file);
+
+        // Parse Shared Strings
+        let sharedStrings = [];
+        if (zip.files['xl/sharedStrings.xml']) {
+          const ssXml = await zip.files['xl/sharedStrings.xml'].async('text');
+          const doc = new DOMParser().parseFromString(ssXml, 'text/xml');
+          doc.querySelectorAll('si').forEach(si => {
+            const t = si.querySelector('t');
+            sharedStrings.push(t ? t.textContent : '');
+          });
+        }
+
+        // Parse Sheet 1 XML
+        const sheetFile = zip.files['xl/worksheets/sheet1.xml'];
+        if (!sheetFile) throw new Error("Could not find xl/worksheets/sheet1.xml in archive.");
+
+        const sheetXml = await sheetFile.async('text');
+        const doc = new DOMParser().parseFromString(sheetXml, 'text/xml');
+        const rows = doc.querySelectorAll('row');
+
+        const extractedRows = [];
+        rows.forEach(r => {
+          const rowCells = {};
+          r.querySelectorAll('c').forEach(c => {
+            const ref = c.getAttribute('r') || '';
+            const col = ref.replace(/[0-9]/g, '');
+            const t = c.getAttribute('t');
+            const v = c.querySelector('v');
+            let val = v ? v.textContent : '';
+
+            if (val === 'NaN') val = '';
+            else if (t === 's' && !isNaN(val)) {
+              val = sharedStrings[parseInt(val)] || val;
+            }
+            rowCells[col] = val.trim();
+          });
+          if (Object.values(rowCells).some(v => v !== '')) {
+            extractedRows.push(rowCells);
+          }
+        });
+
+        if (extractedRows.length < 2) throw new Error("Not enough data rows found in this spreadsheet.");
+
+        // Build HTML Report
+        const headerRow = extractedRows[0];
+        const cols = Object.keys(headerRow).sort((a, b) => (a.length - b.length) || a.localeCompare(b));
+        const dataRows = extractedRows.slice(1);
+
+        let approvedCount = 0;
+        let pendingCount = 0;
+        let totalDaysCount = 0;
+        let applicant = "Employee Record";
+
+        const thTags = cols.map(c => `<th style="padding: 7px 6px; background: #0f172a; color: #ffffff; text-align: left; font-size: 7.5pt; text-transform: uppercase;">${headerRow[c] || c}</th>`).join('');
+
+        const trTags = dataRows.map((r, idx) => {
+          if (r['B']) applicant = r['B'];
+          const status = r['J'] || '';
+          const days = parseFloat(r['G']) || 0;
+          if (status.toLowerCase().includes('approv')) approvedCount++;
+          else if (status.toLowerCase().includes('pend')) pendingCount++;
+          totalDaysCount += days;
+
+          const tdTags = cols.map(c => {
+            let val = r[c] || '';
+            if (c === 'A') val = idx + 1;
+            if (c === 'J') {
+              const isApproved = val.toLowerCase().includes('approv');
+              const style = isApproved ? "background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;" : "background: #fef3c7; color: #b45309; border: 1px solid #fde68a;";
+              return `<td style="padding: 6px; text-align: center;"><span style="padding: 2px 7px; border-radius: 10px; font-weight: bold; font-size: 7pt; ${style}">${val}</span></td>`;
+            }
+            if (c === 'C') {
+              return `<td style="padding: 6px;"><span style="background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 4px; font-size: 7pt;">${val}</span></td>`;
+            }
+            if (c === 'G') {
+              return `<td style="padding: 6px; text-align: center; font-weight: bold; color: #0f172a;">${val}</td>`;
+            }
+            if (c === 'D' && val.includes('\n')) {
+              const [d1, d2] = val.split('\n');
+              return `<td style="padding: 6px;"><div>${d1}</div><div style="font-size: 6.5pt; color: #64748b;">${d2}</div></td>`;
+            }
+            return `<td style="padding: 6px; color: #334155;">${val}</td>`;
+          }).join('');
+
+          return `<tr style="border-bottom: 1px solid #e2e8f0; ${idx % 2 === 1 ? 'background: #fbfcfe;' : ''}">${tdTags}</tr>`;
+        }).join('');
+
+        renderContainer.innerHTML = `
+          <div style="background: white; padding: 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 8pt; color: #1e293b;">
+            <div style="display: table; width: 100%; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
+              <div style="display: table-cell; vertical-align: middle;">
+                <h2 style="margin: 0; font-size: 14pt; color: #0f172a; font-weight: 800;">Leave Applications Record</h2>
+                <p style="margin: 2px 0 0 0; color: #64748b; font-size: 7.5pt;">Employee Leave Request Summary & Audit Log</p>
+              </div>
+              <div style="display: table-cell; text-align: right; vertical-align: middle;">
+                <div style="font-weight: bold; font-size: 8.5pt; color: #0f172a;">APPLICANT: ${applicant}</div>
+                <div style="color: #94a3b8; font-size: 7pt; margin-top: 2px;">Official Document</div>
+              </div>
+            </div>
+
+            <div style="display: table; width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 12px; padding: 8px;">
+              <div style="display: table-cell; width: 25%; text-align: center; border-right: 1px solid #e2e8f0;">
+                <div style="font-size: 6.5pt; text-transform: uppercase; color: #64748b; font-weight: bold;">Total Applications</div>
+                <div style="font-size: 11pt; font-weight: bold; color: #0f172a; margin-top: 2px;">${dataRows.length}</div>
+              </div>
+              <div style="display: table-cell; width: 25%; text-align: center; border-right: 1px solid #e2e8f0;">
+                <div style="font-size: 6.5pt; text-transform: uppercase; color: #64748b; font-weight: bold;">Approved</div>
+                <div style="font-size: 11pt; font-weight: bold; color: #15803d; margin-top: 2px;">${approvedCount}</div>
+              </div>
+              <div style="display: table-cell; width: 25%; text-align: center; border-right: 1px solid #e2e8f0;">
+                <div style="font-size: 6.5pt; text-transform: uppercase; color: #64748b; font-weight: bold;">Pending</div>
+                <div style="font-size: 11pt; font-weight: bold; color: #b45309; margin-top: 2px;">${pendingCount}</div>
+              </div>
+              <div style="display: table-cell; width: 25%; text-align: center;">
+                <div style="font-size: 6.5pt; text-transform: uppercase; color: #64748b; font-weight: bold;">Total Days</div>
+                <div style="font-size: 11pt; font-weight: bold; color: #0f172a; margin-top: 2px;">${totalDaysCount} Days</div>
+              </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;">
+              <thead><tr>${thTags}</tr></thead>
+              <tbody>${trTags}</tbody>
+            </table>
+          </div>
+        `;
+
+        targetFileName = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+
+        const opt = {
+          margin: 6,
+          filename: targetFileName,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        const pdfBlob = await html2pdf().set(opt).from(renderContainer.firstElementChild).output('blob');
+        pdfBlobUrl = window.URL.createObjectURL(pdfBlob);
+
+        // Success / Download State
+        actionBtn.disabled = false;
+        actionBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2";
+        iconBox.className = "w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors duration-300";
+        spinner.classList.add('hidden');
+        btnIcon.classList.remove('hidden');
+        btnIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>`;
+        btnText.textContent = "Download PDF";
+
+        statusMessage.className = "text-xs font-semibold mt-3 text-emerald-600 block";
+        statusMessage.textContent = "✓ PDF ready! Click the button above to download.";
+
+      } catch (err) {
+        alert("Conversion error: " + err.message);
+        resetToConvertState();
+      }
+    });
+  </script>
+</body>
+</html>
