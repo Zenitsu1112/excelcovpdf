@@ -186,6 +186,22 @@
     min-height: 16px;
   }
 
+  /* Ownership / Trademark Footer */
+  .brand-footer {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    user-select: none;
+  }
+  .brand-footer .owner-name {
+    color: var(--text);
+    font-weight: 600;
+  }
+
   /* Filename Modal Overlay */
   .overlay {
     position: fixed;
@@ -263,12 +279,10 @@
       background-attachment: scroll;
     }
     .card {
-      padding: 16px;
+      padding: 18px 16px 14px;
       border-radius: 14px;
     }
-    h1 {
-      font-size: 18px;
-    }
+    h1 { font-size: 18px; }
     .dropzone {
       padding: 20px 12px;
       font-size: 13px;
@@ -277,9 +291,13 @@
       grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
       gap: 8px;
     }
+    .brand-footer {
+      margin-top: 18px;
+      padding-top: 12px;
+      font-size: 11px;
+    }
   }
 
-  /* Extremely Narrow Screens (<360px) */
   @media (max-width: 360px) {
     .top-bar {
       flex-direction: column;
@@ -295,7 +313,7 @@
 <body>
 
 <div class="card">
-  <!-- Top Navigation & Action Header (No overlapping) -->
+  <!-- Top Navigation & Action Header -->
   <div class="top-bar">
     <a class="nav-link" href="excel-to-pdf.html">
       <span>←</span> Excel → PDF tool
@@ -317,6 +335,11 @@
   <div class="thumbs" id="thumbs"></div>
   <div class="count" id="count"></div>
   <div class="status" id="status"></div>
+
+  <!-- Ownership / Trademark Line -->
+  <div class="brand-footer">
+    Created & Owned by <span class="owner-name">Ranjan</span>
+  </div>
 </div>
 
 <!-- Custom Filename Modal -->
@@ -392,7 +415,6 @@ function renderThumbs() {
   convertBtn.disabled = images.length === 0;
 }
 
-// Open custom filename modal
 convertBtn.addEventListener('click', () => {
   filenameInput.value = '';
   extPreview.textContent = 'my-file';
@@ -430,7 +452,6 @@ async function buildAndDownloadPdf(filename) {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
 
-    // Preserve aspect ratio and fit page bounds
     const ratio = Math.min(pageW / dims.w, pageH / dims.h);
     const w = dims.w * ratio;
     const h = dims.h * ratio;
