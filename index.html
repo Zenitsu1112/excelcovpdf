@@ -41,7 +41,7 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  /* Responsive Top Navigation & Action Bar */
+  /* Responsive Top Bar */
   .top-bar {
     display: flex;
     align-items: center;
@@ -106,7 +106,45 @@
     color: var(--muted);
     font-size: 13px;
     line-height: 1.45;
-    margin: 0 0 18px 0;
+    margin: 0 0 16px 0;
+  }
+
+  /* Compression Preset Selector */
+  .compress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+  .compress-label {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .compress-options {
+    display: flex;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .comp-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 6px 11px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .comp-btn.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
   }
 
   /* Dropzone */
@@ -272,7 +310,7 @@
     word-break: break-all;
   }
 
-  /* Mobile Adjustments */
+  /* Responsive Breakpoints */
   @media (max-width: 480px) {
     body {
       padding: 12px;
@@ -286,6 +324,19 @@
     .dropzone {
       padding: 20px 12px;
       font-size: 13px;
+    }
+    .compress-bar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .compress-options {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .comp-btn {
+      flex: 1;
+      text-align: center;
+      padding: 6px 4px;
     }
     .thumbs {
       grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -313,7 +364,7 @@
 <body>
 
 <div class="card">
-  <!-- Top Navigation & Action Header -->
+  <!-- Top Navigation Bar -->
   <div class="top-bar">
     <a class="nav-link" href="excel-to-pdf.html">
       <span>←</span> Excel → PDF tool
@@ -324,8 +375,19 @@
   </div>
 
   <h1>Image → PDF</h1>
-  <p class="sub">Add JPG or PNG images, then use the button above to download as a custom-named PDF document.</p>
+  <p class="sub">Add JPG or PNG images, pick your size target, and download as a clean PDF.</p>
 
+  <!-- Compression Presets -->
+  <div class="compress-bar">
+    <span class="compress-label">Compression / Size:</span>
+    <div class="compress-options">
+      <button type="button" class="comp-btn" data-preset="portal">Small (Portal)</button>
+      <button type="button" class="comp-btn active" data-preset="medium">Medium</button>
+      <button type="button" class="comp-btn" data-preset="high">Original</button>
+    </div>
+  </div>
+
+  <!-- Drag and Drop Zone -->
   <div class="dropzone" id="dropzone">
     <div>Click to choose files, or drag & drop here</div>
     <div class="hint">JPG / JPEG / PNG supported</div>
@@ -336,13 +398,13 @@
   <div class="count" id="count"></div>
   <div class="status" id="status"></div>
 
-  <!-- Ownership / Trademark Line -->
+  <!-- Ownership Footer -->
   <div class="brand-footer">
     Created & Owned by <span class="owner-name">Ranjan</span>
   </div>
 </div>
 
-<!-- Custom Filename Modal -->
+<!-- Filename Modal -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2>Name your PDF</h2>
@@ -372,6 +434,22 @@ const cancelBtn = document.getElementById('cancelBtn');
 const confirmBtn = document.getElementById('confirmBtn');
 
 let images = []; // { file, dataUrl }
+
+// Compression presets: adjusts quality and caps maximum dimensions
+const COMPRESSION_PRESETS = {
+  portal: { quality: 0.50, maxDim: 1200 }, // Ideal for upload portals (< 500 KB)
+  medium: { quality: 0.75, maxDim: 1800 }, // Balanced crispness (~1 MB)
+  high:   { quality: 0.92, maxDim: 2600 }  // High fidelity
+};
+let selectedPreset = 'medium';
+
+document.querySelectorAll('.comp-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.comp-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedPreset = btn.dataset.preset;
+  });
+});
 
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
@@ -432,7 +510,6 @@ cancelBtn.addEventListener('click', () => overlay.classList.remove('show'));
 confirmBtn.addEventListener('click', async () => {
   const name = sanitizeName(filenameInput.value) || 'my-file';
   overlay.classList.remove('show');
-  statusEl.textContent = 'Building PDF...';
   convertBtn.disabled = true;
   await buildAndDownloadPdf(name);
   statusEl.textContent = 'Done — PDF downloaded.';
@@ -443,37 +520,68 @@ function sanitizeName(name) {
   return name.trim().replace(/[\\/:*?"<>|]/g, '').slice(0, 100);
 }
 
+// Off-screen canvas compressor with pure white fill for transparent PNGs
+function compressImage(dataUrl, presetKey) {
+  const config = COMPRESSION_PRESETS[presetKey];
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      const maxDim = config.maxDim;
+
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+
+      // Fill pure white to avoid black backgrounds on transparent PNGs
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', config.quality);
+      resolve({ dataUrl: compressedDataUrl, w, h });
+    };
+    img.src = dataUrl;
+  });
+}
+
 async function buildAndDownloadPdf(filename) {
   const doc = new jsPDF({ unit: 'px' });
   let first = true;
 
-  for (const img of images) {
-    const dims = await getImageDimensions(img.dataUrl);
+  for (let i = 0; i < images.length; i++) {
+    statusEl.textContent = `Compressing & adding page ${i + 1} of ${images.length}...`;
+    
+    const processed = await compressImage(images[i].dataUrl, selectedPreset);
+    
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
 
-    const ratio = Math.min(pageW / dims.w, pageH / dims.h);
-    const w = dims.w * ratio;
-    const h = dims.h * ratio;
+    const ratio = Math.min(pageW / processed.w, pageH / processed.h);
+    const w = processed.w * ratio;
+    const h = processed.h * ratio;
     const x = (pageW - w) / 2;
     const y = (pageH - h) / 2;
 
     if (!first) doc.addPage();
     first = false;
 
-    const format = img.file.type.includes('png') ? 'PNG' : 'JPEG';
-    doc.addImage(img.dataUrl, format, x, y, w, h);
+    doc.addImage(processed.dataUrl, 'JPEG', x, y, w, h);
   }
 
   doc.save(`${filename}.pdf`);
-}
-
-function getImageDimensions(dataUrl) {
-  return new Promise(resolve => {
-    const im = new Image();
-    im.onload = () => resolve({ w: im.width, h: im.height });
-    im.src = dataUrl;
-  });
 }
 </script>
 </body>
