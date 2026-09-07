@@ -7,7 +7,7 @@ Built specifically to handle the infamous raw XML `NaN` parsing bugs found in go
 ## 📸 Preview
 
 <p align="center">
-  <img src="image.png" alt="Portal Document & Media to PDF Suite Preview" width="800" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
+  <img src="assets/image.png" alt="Portal Document & Media to PDF Suite Preview" width="800" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
 </p>
 
 ---
