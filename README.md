@@ -1,8 +1,14 @@
 # 📄 Portal Document & Media to PDF Suite
 
-A lightweight, zero-dependency, 100% client-side web utility designed to convert portal spreadsheet exports (`.xlsx`) and images (`.jpg`, `.jpeg`, `.png`) into clean, print-ready PDF documents.
+![Zero Backend](https://img.shields.io/badge/Backend-Zero_Server-success?style=for-the-badge)
+![Client-Side](https://img.shields.io/badge/Execution-100%25_Browser_Sandbox-blue?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
 
-Built specifically to handle the infamous raw XML `NaN` parsing bugs found in government/education web portal exports (such as **e-Vidyavahini**, **HRMS**, and state portal reports).
+A lightweight, zero-dependency, 100% client-side web utility suite designed to convert portal spreadsheet exports (`.xlsx`) and images (`.jpg`, `.jpeg`, `.png`, `.webp`) into clean, print-ready documents and optimized payloads.
+
+Built specifically to handle the raw XML `NaN` parsing bugs found in government and educational web portal exports (such as **e-Vidyavahini**, **HRMS**, and state administrative reports) that crash standard tools.
+
+---
 
 ## 📸 Preview
 
@@ -13,38 +19,21 @@ Built specifically to handle the infamous raw XML `NaN` parsing bugs found in go
 ---
 
 ## 🚀 Live Demo
-Deployable on **GitHub Pages** with zero configuration.  
-👉 **[View Live Web App](https://zenitsu1112.github.io/excelcovpdf//)** 
 
----
-
-## ✨ Features
-
-### 1. 📊 Portal Excel to PDF (`excel-to-pdf.html`)
-* **Bypasses Portal XML Bugs:** Standard tools like Excel, Python `openpyxl`, and Pandas fail when reading web portal spreadsheets containing invalid `NaN` XML attribute tags. This tool unpacks the `.xlsx` container via `JSZip` and parses the underlying XML directly in-memory.
-* **Audit Dashboard & Summary Cards:** Automatically tallies metrics like *Total Applications*, *Approved*, *Pending*, and *Total Days Requested*.
-* **Formatted Badges:** Dynamically highlights leave statuses (Green for Approved, Amber for Pending) and formats multiline dates/timestamps.
-* **Print-Perfect A4 Landscape:** Generates clean, publication-ready vector PDFs using client-side rendering.
-
-### 2. 🖼️ Image to PDF Converter (`index.html`)
-* **Multi-Image Support:** Select or drag & drop single or multiple `.jpg`, `.jpeg`, or `.png` photos at once.
-* **Live Thumbnails & Management:** Preview selected images and remove mistakes with a single tap.
-* **Smart Orientation & Scaling:** Automatically detects portrait vs. landscape images and scales them proportionately centered on standard A4 canvas.
-* **Custom Filename Modal:** Prompts for a custom file name before downloading (`my-scans.pdf`).
-
-### 3. 📱 Mobile-First & Privacy-Focused
-* **100% Client-Side:** No files are ever sent to an external server or database. All parsing, canvas rendering, and PDF compilation happen inside the browser sandbox.
-* **Fully Responsive:** Optimized touch targets and layout for smartphones, tablets, and desktop displays.
+Deployable on **GitHub Pages** with zero build configuration.  
+👉 **[Launch Web Workspace](https://zenitsu1112.github.io/excelcovpdf/)**
 
 ---
 
 ## 🛠️ How It Solves the Portal `NaN` Bug
 
-Portal data exporters (e.g., e-Vidyavahini) frequently serialize missing serial numbers or numeric values into `.xlsx` sheet XML files as:
+Portal data exporters (e.g., e-Vidyavahini, HRMS) frequently serialize missing serial numbers, empty dates, or undefined numeric formulas directly into spreadsheet XML as raw `NaN` strings:
 
 ```xml
-<!-- Corrupted Portal XML Output -->
+<!-- Corrupted Portal XML Output inside xl/worksheets/sheet1.xml -->
 <row r="2">
     <c r="A2"><v>NaN</v></c>
-    <c r="B2" t="str"><v>TEACHER NAME</v></c>
+    <c r="B2" t="s"><v>0</v></c>
+    <c r="G2"><v>NaN</v></c>
+    <c r="J2" t="s"><v>1</v></c>
 </row>
