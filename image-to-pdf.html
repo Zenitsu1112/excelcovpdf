@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image to PDF Converter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --accent: #6c8cff;
+    --accent-hover: #5879f5;
+    --text: #eef1f7;
+    --muted: #9aa3b2;
+    --border: #333947;
+  }
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.65)),
+                url('assets/StarryNightCampsite.jpg') no-repeat center center fixed;
+    background-size: cover;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Responsive Top Bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .nav-link {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .nav-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(108, 140, 255, 0.08);
+  }
+
+  .corner-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.15s, opacity 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .corner-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .corner-btn:not(:disabled):hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.3px;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+    margin: 0 0 16px 0;
+  }
+
+  /* Compression Preset Selector */
+  .compress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+  .compress-label {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .compress-options {
+    display: flex;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .comp-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 6px 11px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .comp-btn.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Dropzone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: rgba(255, 255, 255, 0.01);
+  }
+  .dropzone.drag {
+    border-color: var(--accent);
+    background: rgba(108, 140, 255, 0.08);
+  }
+  .dropzone input { display: none; }
+  .dropzone .hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  /* Thumbnails Preview */
+  .thumbs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .thumb {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--border);
+  }
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb .rm {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .thumb .rm:hover {
+    background: #e11d48;
+  }
+
+  .count {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 12px;
+    font-weight: 500;
+  }
+  .status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  /* Ownership / Trademark Footer */
+  .brand-footer {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    user-select: none;
+  }
+  .brand-footer .owner-name {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Filename Modal Overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    width: 100%;
+    max-width: 350px;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+  }
+  .modal h2 {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+  }
+  .modal input[type=text] {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #111319;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .modal input[type=text]:focus {
+    border-color: var(--accent);
+  }
+  .modal .row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .modal button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-cancel {
+    background: #2a2e38;
+    color: var(--text);
+  }
+  .btn-confirm {
+    background: var(--accent);
+    color: #fff;
+  }
+  .ext {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  /* Responsive Breakpoints */
+  @media (max-width: 480px) {
+    body {
+      padding: 12px;
+      background-attachment: scroll;
+    }
+    .card {
+      padding: 18px 16px 14px;
+      border-radius: 14px;
+    }
+    h1 { font-size: 18px; }
+    .dropzone {
+      padding: 20px 12px;
+      font-size: 13px;
+    }
+    .compress-bar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .compress-options {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .comp-btn {
+      flex: 1;
+      text-align: center;
+      padding: 6px 4px;
+    }
+    .thumbs {
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 8px;
+    }
+    .brand-footer {
+      margin-top: 18px;
+      padding-top: 12px;
+      font-size: 11px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .top-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .nav-link, .corner-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Top Navigation Bar -->
+  <div class="top-bar">
+    <a class="nav-link" href="excel-to-pdf.html">
+      <span>←</span> Excel → PDF tool
+    </a>
+    <button class="corner-btn" id="convertBtn" disabled>
+      ⇩ Convert to PDF
+    </button>
+  </div>
+
+  <h1>Image → PDF</h1>
+  <p class="sub">Add JPG or PNG images, pick your size target, and download as a clean PDF.</p>
+
+  <!-- Compression Presets -->
+  <div class="compress-bar">
+    <span class="compress-label">Compression / Size:</span>
+    <div class="compress-options">
+      <button type="button" class="comp-btn" data-preset="portal">Small (Portal)</button>
+      <button type="button" class="comp-btn active" data-preset="medium">Medium</button>
+      <button type="button" class="comp-btn" data-preset="high">Original</button>
+    </div>
+  </div>
+
+  <!-- Drag and Drop Zone -->
+  <div class="dropzone" id="dropzone">
+    <div>Click to choose files, or drag & drop here</div>
+    <div class="hint">JPG / JPEG / PNG supported</div>
+    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
+  </div>
+
+  <div class="thumbs" id="thumbs"></div>
+  <div class="count" id="count"></div>
+  <div class="status" id="status"></div>
+
+  <!-- Ownership Footer -->
+  <div class="brand-footer">
+    Created & Owned by <span class="owner-name">Ranjan</span>
+  </div>
+</div>
+
+<!-- Filename Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Name your PDF</h2>
+    <input type="text" id="filenameInput" placeholder="e.g. scanned-documents" autocomplete="off">
+    <div class="ext">Saved as <span id="extPreview" style="color: var(--accent);">my-file</span>.pdf</div>
+    <div class="row">
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      <button class="btn-confirm" id="confirmBtn">Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const thumbs = document.getElementById('thumbs');
+const countEl = document.getElementById('count');
+const convertBtn = document.getElementById('convertBtn');
+const statusEl = document.getElementById('status');
+
+const overlay = document.getElementById('overlay');
+const filenameInput = document.getElementById('filenameInput');
+const extPreview = document.getElementById('extPreview');
+const cancelBtn = document.getElementById('cancelBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+
+let images = []; // { file, dataUrl }
+
+// Compression presets: adjusts quality and caps maximum dimensions
+const COMPRESSION_PRESETS = {
+  portal: { quality: 0.50, maxDim: 1200 }, // Ideal for upload portals (< 500 KB)
+  medium: { quality: 0.75, maxDim: 1800 }, // Balanced crispness (~1 MB)
+  high:   { quality: 0.92, maxDim: 2600 }  // High fidelity
+};
+let selectedPreset = 'medium';
+
+document.querySelectorAll('.comp-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.comp-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedPreset = btn.dataset.preset;
+  });
+});
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+function handleFiles(fileList) {
+  const valid = Array.from(fileList).filter(f => /image\/(jpeg|png)/.test(f.type));
+  valid.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      images.push({ file, dataUrl: e.target.result });
+      renderThumbs();
+    };
+    reader.readAsDataURL(file);
+  });
+  fileInput.value = '';
+}
+
+function renderThumbs() {
+  thumbs.innerHTML = '';
+  images.forEach((img, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `<img src="${img.dataUrl}"><button class="rm" data-i="${i}" title="Remove image">✕</button>`;
+    thumbs.appendChild(div);
+  });
+  thumbs.querySelectorAll('.rm').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      images.splice(Number(btn.dataset.i), 1);
+      renderThumbs();
+    });
+  });
+  countEl.textContent = images.length ? `${images.length} image(s) added` : '';
+  convertBtn.disabled = images.length === 0;
+}
+
+convertBtn.addEventListener('click', () => {
+  filenameInput.value = '';
+  extPreview.textContent = 'my-file';
+  overlay.classList.add('show');
+  setTimeout(() => filenameInput.focus(), 50);
+});
+
+filenameInput.addEventListener('input', () => {
+  const v = sanitizeName(filenameInput.value) || 'my-file';
+  extPreview.textContent = v;
+});
+
+cancelBtn.addEventListener('click', () => overlay.classList.remove('show'));
+
+confirmBtn.addEventListener('click', async () => {
+  const name = sanitizeName(filenameInput.value) || 'my-file';
+  overlay.classList.remove('show');
+  convertBtn.disabled = true;
+  await buildAndDownloadPdf(name);
+  statusEl.textContent = 'Done — PDF downloaded.';
+  convertBtn.disabled = false;
+});
+
+function sanitizeName(name) {
+  return name.trim().replace(/[\\/:*?"<>|]/g, '').slice(0, 100);
+}
+
+// Off-screen canvas compressor with pure white fill for transparent PNGs
+function compressImage(dataUrl, presetKey) {
+  const config = COMPRESSION_PRESETS[presetKey];
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      const maxDim = config.maxDim;
+
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+
+      // Fill pure white to avoid black backgrounds on transparent PNGs
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', config.quality);
+      resolve({ dataUrl: compressedDataUrl, w, h });
+    };
+    img.src = dataUrl;
+  });
+}
+
+async function buildAndDownloadPdf(filename) {
+  const doc = new jsPDF({ unit: 'px' });
+  let first = true;
+
+  for (let i = 0; i < images.length; i++) {
+    statusEl.textContent = `Compressing & adding page ${i + 1} of ${images.length}...`;
+    
+    const processed = await compressImage(images[i].dataUrl, selectedPreset);
+    
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+
+    const ratio = Math.min(pageW / processed.w, pageH / processed.h);
+    const w = processed.w * ratio;
+    const h = processed.h * ratio;
+    const x = (pageW - w) / 2;
+    const y = (pageH - h) / 2;
+
+    if (!first) doc.addPage();
+    first = false;
+
+    doc.addImage(processed.dataUrl, 'JPEG', x, y, w, h);
+  }
+
+  doc.save(`${filename}.pdf`);
+}
+</script>
+</body>
+</html>
