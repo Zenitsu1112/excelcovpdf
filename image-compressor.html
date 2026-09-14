@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Compressor</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --accent: #6c8cff;
+    --accent-hover: #5879f5;
+    --text: #eef1f7;
+    --muted: #9aa3b2;
+    --border: #333947;
+    --success: #22c55e;
+  }
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.65)),
+                url('assets/StarryNightCampsite.jpg') no-repeat center center fixed;
+    background-size: cover;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Top Navigation Bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .nav-link {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .nav-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(108, 140, 255, 0.08);
+  }
+
+  .corner-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.15s, opacity 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .corner-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .corner-btn:not(:disabled):hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.3px;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+    margin: 0 0 16px 0;
+  }
+
+  /* Dropzone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: rgba(255, 255, 255, 0.01);
+  }
+  .dropzone.drag {
+    border-color: var(--accent);
+    background: rgba(108, 140, 255, 0.08);
+  }
+  .dropzone input { display: none; }
+  .dropzone .hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  /* Controls */
+  .controls-panel {
+    margin-top: 18px;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: none;
+  }
+  .controls-panel.active { display: block; }
+
+  .control-row {
+    margin-bottom: 14px;
+  }
+  .control-row:last-child { margin-bottom: 0; }
+
+  .control-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    margin-bottom: 8px;
+  }
+  .control-header span:first-child { color: var(--muted); }
+  .control-header span:last-child { font-weight: 600; color: var(--accent); }
+
+  input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Comparison Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-box {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  .stat-box .lbl {
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .stat-box .val {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .stat-box .val.saved { color: var(--success); }
+
+  /* Preview Thumb */
+  .preview-wrapper {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+  }
+  .preview-box {
+    position: relative;
+    max-height: 180px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .preview-box img {
+    display: block;
+    max-height: 180px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  /* Brand Footer */
+  .brand-footer {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    user-select: none;
+  }
+  .brand-footer .owner-name {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Modal Overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    width: 100%;
+    max-width: 350px;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+  }
+  .modal h2 {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+  }
+  .modal input[type=text] {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #111319;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .modal input[type=text]:focus { border-color: var(--accent); }
+  .modal .row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .modal button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-cancel {
+    background: #2a2e38;
+    color: var(--text);
+  }
+  .btn-confirm {
+    background: var(--accent);
+    color: #fff;
+  }
+  .ext {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    body {
+      padding: 12px;
+      background-attachment: scroll;
+    }
+    .card {
+      padding: 18px 16px 14px;
+      border-radius: 14px;
+    }
+    h1 { font-size: 18px; }
+    .dropzone { padding: 20px 12px; font-size: 13px; }
+  }
+
+  @media (max-width: 360px) {
+    .top-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .nav-link, .corner-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Top Navigation -->
+  <div class="top-bar">
+    <a class="nav-link" href="index.html">
+      <span>←</span> All Tools
+    </a>
+    <button class="corner-btn" id="downloadBtn" disabled>
+      ⇩ Download Image
+    </button>
+  </div>
+
+  <h1>Image Compressor</h1>
+  <p class="sub">Reduce KB size for portals and forms while preserving visual clarity.</p>
+
+  <!-- Upload Area -->
+  <div class="dropzone" id="dropzone">
+    <div>Click to choose image, or drag & drop here</div>
+    <div class="hint">JPG / PNG / WEBP supported</div>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+  </div>
+
+  <!-- Realtime Compression Controls -->
+  <div class="controls-panel" id="controlsPanel">
+    <div class="control-row">
+      <div class="control-header">
+        <span>Compression Quality:</span>
+        <span id="qualityVal">70%</span>
+      </div>
+      <input type="range" id="qualityRange" min="5" max="95" value="70">
+    </div>
+
+    <div class="control-row">
+      <div class="control-header">
+        <span>Max Resolution Scale:</span>
+        <span id="scaleVal">100%</span>
+      </div>
+      <input type="range" id="scaleRange" min="20" max="100" step="5" value="100">
+    </div>
+
+    <!-- Size comparison display -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="lbl">Original</div>
+        <div class="val" id="origSize">0 KB</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">Compressed</div>
+        <div class="val" id="compSize">0 KB</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">Reduced By</div>
+        <div class="val saved" id="savedPct">0%</div>
+      </div>
+    </div>
+
+    <div class="preview-wrapper">
+      <div class="preview-box">
+        <img id="previewImg" alt="Preview">
+      </div>
+    </div>
+  </div>
+
+  <!-- Ownership Footer -->
+  <div class="brand-footer">
+    Created & Owned by <span class="owner-name">Ranjan</span>
+  </div>
+</div>
+
+<!-- Filename Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Name your Image</h2>
+    <input type="text" id="filenameInput" placeholder="e.g. passport-photo" autocomplete="off">
+    <div class="ext">Saved as <span id="extPreview" style="color: var(--accent);">my-image</span>.jpg</div>
+    <div class="row">
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      <button class="btn-confirm" id="confirmBtn">Download</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const controlsPanel = document.getElementById('controlsPanel');
+const qualityRange = document.getElementById('qualityRange');
+const qualityVal = document.getElementById('qualityVal');
+const scaleRange = document.getElementById('scaleRange');
+const scaleVal = document.getElementById('scaleVal');
+const origSizeEl = document.getElementById('origSize');
+const compSizeEl = document.getElementById('compSize');
+const savedPctEl = document.getElementById('savedPct');
+const previewImg = document.getElementById('previewImg');
+const downloadBtn = document.getElementById('downloadBtn');
+
+const overlay = document.getElementById('overlay');
+const filenameInput = document.getElementById('filenameInput');
+const extPreview = document.getElementById('extPreview');
+const cancelBtn = document.getElementById('cancelBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+
+let rawImage = null;
+let originalFileSize = 0;
+let compressedBlob = null;
+
+// Drag and drop listeners
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  originalFileSize = file.size;
+  origSizeEl.textContent = formatBytes(originalFileSize);
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      rawImage = img;
+      controlsPanel.classList.add('active');
+      processCompression();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Live compression processing using HTML5 Canvas
+function processCompression() {
+  if (!rawImage) return;
+
+  const quality = qualityRange.value / 100;
+  const scale = scaleRange.value / 100;
+
+  qualityVal.textContent = `${qualityRange.value}%`;
+  scaleVal.textContent = `${scaleRange.value}%`;
+
+  const canvas = document.createElement('canvas');
+  const targetW = Math.round(rawImage.naturalWidth * scale);
+  const targetH = Math.round(rawImage.naturalHeight * scale);
+
+  canvas.width = targetW;
+  canvas.height = targetH;
+
+  const ctx = canvas.getContext('2d');
+  // Pure white backing for transparent PNGs converted to JPEG
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, targetW, targetH);
+  ctx.drawImage(rawImage, 0, 0, targetW, targetH);
+
+  canvas.toBlob(blob => {
+    compressedBlob = blob;
+    compSizeEl.textContent = formatBytes(blob.size);
+
+    const saved = Math.max(0, Math.round(((originalFileSize - blob.size) / originalFileSize) * 100));
+    savedPctEl.textContent = `${saved}%`;
+
+    const blobUrl = URL.createObjectURL(blob);
+    previewImg.src = blobUrl;
+    downloadBtn.disabled = false;
+  }, 'image/jpeg', quality);
+}
+
+qualityRange.addEventListener('input', processCompression);
+scaleRange.addEventListener('input', processCompression);
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 KB';
+  const k = 1024;
+  if (bytes < k * 1024) return (bytes / k).toFixed(1) + ' KB';
+  return (bytes / (k * k)).toFixed(2) + ' MB';
+}
+
+// Modal handling
+downloadBtn.addEventListener('click', () => {
+  filenameInput.value = '';
+  extPreview.textContent = 'my-image';
+  overlay.classList.add('show');
+  setTimeout(() => filenameInput.focus(), 50);
+});
+
+filenameInput.addEventListener('input', () => {
+  const v = sanitizeName(filenameInput.value) || 'my-image';
+  extPreview.textContent = v;
+});
+
+filenameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    confirmBtn.click();
+  }
+});
+
+cancelBtn.addEventListener('click', () => overlay.classList.remove('show'));
+
+confirmBtn.addEventListener('click', () => {
+  const name = sanitizeName(filenameInput.value) || 'my-image';
+  overlay.classList.remove('show');
+  
+  if (!compressedBlob) return;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(compressedBlob);
+  link.download = `${name}.jpg`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+function sanitizeName(name) {
+  return name.trim().replace(/[\\/:*?"<>|]/g, '').slice(0, 100);
+}
+</script>
+</body>
+</html>
