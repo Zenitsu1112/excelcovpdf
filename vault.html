@@ -70,7 +70,7 @@
     font-weight: 600;
   }
 
-  /* Authentication View */
+  /* Authentication */
   .auth-tabs {
     display: flex;
     gap: 6px;
@@ -169,7 +169,7 @@
     cursor: pointer;
   }
 
-  /* Hardware-level Progress Bar */
+  /* Progress Bar */
   .progress-wrapper {
     margin-top: 10px;
     background: #111319;
@@ -190,7 +190,7 @@
     height: 100%;
     background: var(--accent);
     border-radius: 4px;
-    transition: width 0.1s ease-out;
+    transition: width 0.2s ease;
   }
   .progress-text {
     display: flex;
@@ -276,7 +276,6 @@
     justify-content: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     overflow: hidden;
-    position: relative;
   }
   .file-preview img {
     width: 100%;
@@ -366,7 +365,7 @@
     <button id="logoutBtn" class="btn-card" style="flex: initial; padding: 6px 12px;">Log Out</button>
   </div>
 
-  <!-- AUTHENTICATION FORM -->
+  <!-- AUTH FORM -->
   <div id="authSection">
     <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Google Drive Vault</h1>
     <p style="color: var(--muted); font-size: 13px; margin-bottom: 18px;">Personal cloud storage backed by 5 TB Drive capacity.</p>
@@ -396,7 +395,7 @@
     <div class="dropzone" id="dropzone">
       <div id="dropzoneDefault">
         <div style="font-size: 13px; font-weight: 500;">Click or drop file to select</div>
-        <div class="hint">Upload images, PDFs, ZIPs, or heavy archives</div>
+        <div class="hint">Images, PDFs, ZIPs up to 15 MB</div>
       </div>
       <div id="dropzoneSelected" class="hidden">
         <div class="selected-preview-pill">
@@ -415,7 +414,7 @@
         <div id="progressBar" class="progress-bar-fill"></div>
       </div>
       <div class="progress-text">
-        <span id="progressState">Uploading...</span>
+        <span id="progressState">Uploading to Drive...</span>
         <span id="progressPct">0%</span>
       </div>
     </div>
@@ -450,7 +449,6 @@ let currentPass = null;
 let allFiles = [];
 let stagedFile = null;
 
-// Elements
 const authSection = document.getElementById('authSection');
 const vaultSection = document.getElementById('vaultSection');
 const tabLogin = document.getElementById('tabLogin');
@@ -482,7 +480,6 @@ const searchBtn = document.getElementById('searchBtn');
 const filesGrid = document.getElementById('filesGrid');
 const vaultStatus = document.getElementById('vaultStatus');
 
-// Auth Switchers
 tabLogin.addEventListener('click', () => {
   isLoginMode = true;
   tabLogin.classList.add('active');
@@ -499,7 +496,6 @@ tabRegister.addEventListener('click', () => {
   authStatus.textContent = '';
 });
 
-// Authentication Dispatch
 authSubmitBtn.addEventListener('click', async () => {
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
@@ -510,16 +506,12 @@ authSubmitBtn.addEventListener('click', async () => {
   }
 
   authSubmitBtn.disabled = true;
-  authStatus.textContent = isLoginMode ? 'Verifying credentials...' : 'Provisioning Drive folder...';
+  authStatus.textContent = isLoginMode ? 'Verifying...' : 'Creating Drive folder...';
 
   try {
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: isLoginMode ? 'login' : 'register',
-        username,
-        password
-      })
+      body: JSON.stringify({ action: isLoginMode ? 'login' : 'register', username, password })
     });
     const data = await res.json();
 
@@ -533,7 +525,7 @@ authSubmitBtn.addEventListener('click', async () => {
     currentPass = password;
 
     if (!isLoginMode) {
-      alert(`User "${username}" created with its own Drive folder! Logging in...`);
+      alert(`User "${username}" created! Logging you in...`);
       const loginRes = await fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'login', username, password })
@@ -563,7 +555,6 @@ function showVault() {
 
 logoutBtn.addEventListener('click', () => location.reload());
 
-// Staging Listeners (Prevents auto upload)
 dropzone.addEventListener('click', (e) => {
   if (e.target !== clearStagedBtn) fileInput.click();
 });
@@ -579,6 +570,10 @@ fileInput.addEventListener('change', () => {
 });
 
 function stageFile(file) {
+  if (file.size > 15 * 1024 * 1024) {
+    alert("File exceeds maximum 15 MB limit for direct upload.");
+    return;
+  }
   stagedFile = file;
   stagedFileName.textContent = file.name;
   stagedFileSize.textContent = formatBytes(file.size);
@@ -602,87 +597,75 @@ function clearStagedFile() {
   uploadBtn.textContent = 'Upload to Drive';
 }
 
-// Resumable Direct Upload Pipeline
-uploadBtn.addEventListener('click', async () => {
+// Fixed Upload Logic (Uses fetch() to prevent 302 redirect network errors)
+uploadBtn.addEventListener('click', () => {
   if (!stagedFile) return;
 
   uploadBtn.disabled = true;
   progressWrapper.classList.remove('hidden');
-  progressBar.style.width = '0%';
-  progressPct.textContent = '0%';
-  progressState.textContent = 'Initiating Drive upload slot...';
+  progressBar.style.width = '15%';
+  progressPct.textContent = '15%';
+  progressState.textContent = 'Reading file bytes...';
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64Data = reader.result.split(',')[1];
+    await sendFilePayload(stagedFile.name, stagedFile.type, base64Data);
+  };
+  reader.readAsDataURL(stagedFile);
+});
+
+async function sendFilePayload(fileName, mimeType, base64Data) {
+  progressState.textContent = 'Saving to Google Drive...';
+
+  // Smooth progress ticker while waiting for Drive ingestion
+  let pct = 20;
+  const timer = setInterval(() => {
+    if (pct < 88) {
+      pct += Math.floor(Math.random() * 6) + 3;
+      if (pct > 88) pct = 88;
+      progressBar.style.width = `${pct}%`;
+      progressPct.textContent = `${pct}%`;
+    }
+  }, 250);
 
   try {
-    // 1. Fetch direct resumable URL from Google Apps Script
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
-        action: 'getUploadUrl',
+        action: 'upload',
         username: currentUser,
         password: currentPass,
-        fileName: stagedFile.name,
-        mimeType: stagedFile.type || 'application/octet-stream',
-        fileSize: stagedFile.size
+        fileName: fileName,
+        mimeType: mimeType || 'application/octet-stream',
+        fileData: base64Data
       })
     });
 
-    const ticket = await res.json();
-    if (!ticket.success) throw new Error(ticket.message);
+    clearInterval(timer);
+    const data = await res.json();
 
-    // 2. Stream binary directly to Google Drive
-    streamFileDirectly(ticket.uploadUrl, stagedFile);
+    if (!data.success) throw new Error(data.message);
 
+    progressBar.style.width = '100%';
+    progressPct.textContent = '100%';
+    progressState.textContent = 'Saved to Drive!';
+    vaultStatus.className = 'status-text success';
+    vaultStatus.textContent = `✓ "${fileName}" uploaded successfully.`;
+
+    clearStagedFile();
+    refreshFiles();
   } catch (err) {
+    clearInterval(timer);
     vaultStatus.className = 'status-text error';
-    vaultStatus.textContent = 'Upload error: ' + err.message;
-    progressWrapper.classList.add('hidden');
+    vaultStatus.textContent = 'Upload failed: ' + err.message;
+    progressState.textContent = 'Error occurred';
+  } finally {
+    setTimeout(() => progressWrapper.classList.add('hidden'), 2200);
     uploadBtn.disabled = false;
   }
-});
-
-function streamFileDirectly(uploadUrl, file) {
-  const xhr = new XMLHttpRequest();
-  xhr.open('PUT', uploadUrl, true);
-  xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-
-  // Real-time byte upload tracking
-  xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) {
-      const pct = Math.round((e.loaded / e.total) * 100);
-      progressBar.style.width = `${pct}%`;
-      progressPct.textContent = `${pct}%`;
-      progressState.textContent = `Uploading: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
-    }
-  };
-
-  xhr.onload = () => {
-    if (xhr.status === 200 || xhr.status === 201) {
-      progressBar.style.width = '100%';
-      progressPct.textContent = '100%';
-      progressState.textContent = 'Saved to Drive!';
-      vaultStatus.className = 'status-text success';
-      vaultStatus.textContent = `✓ "${file.name}" uploaded successfully.`;
-      clearStagedFile();
-      refreshFiles();
-    } else {
-      vaultStatus.className = 'status-text error';
-      vaultStatus.textContent = `Drive upload failed with status ${xhr.status}`;
-    }
-    setTimeout(() => progressWrapper.classList.add('hidden'), 2500);
-    uploadBtn.disabled = false;
-  };
-
-  xhr.onerror = () => {
-    vaultStatus.className = 'status-text error';
-    vaultStatus.textContent = 'Connection interrupted during upload.';
-    progressWrapper.classList.add('hidden');
-    uploadBtn.disabled = false;
-  };
-
-  xhr.send(file);
 }
 
-// Refresh File Grid
 async function refreshFiles() {
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
@@ -695,7 +678,6 @@ async function refreshFiles() {
   }
 }
 
-// Live Search Handlers
 searchInput.addEventListener('input', () => {
   searchClear.classList.toggle('show', searchInput.value.length > 0);
   filterFiles();
@@ -719,7 +701,6 @@ function filterFiles() {
   renderGrid(filtered);
 }
 
-// Grid Renderer
 function renderGrid(files) {
   filesGrid.innerHTML = '';
   if (!files.length) {
@@ -766,7 +747,6 @@ function renderGrid(files) {
     filesGrid.appendChild(card);
   });
 
-  // Attach Deletion Handlers
   filesGrid.querySelectorAll('.del').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('Move this file to Google Drive trash?')) return;
