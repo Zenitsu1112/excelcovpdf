@@ -1,8 +1,0 @@
-name = "vault-api"
-main = "worker.js"
-compatibility_date = "2024-09-23"
-
-# Connects R2 to env.VAULT_BUCKET in your JS code
-[[r2_buckets]]
-binding = "VAULT_BUCKET"
-bucket_name = "vault-api"
