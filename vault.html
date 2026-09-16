@@ -15,6 +15,7 @@
     --muted: #9aa3b2;
     --border: #333947;
     --danger: #ef4444;
+    --success: #22c55e;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -34,18 +35,20 @@
   .vault-card {
     background: var(--card);
     border-radius: 18px;
-    padding: 26px;
+    padding: 24px;
     width: 100%;
-    max-width: 580px;
+    max-width: 680px;
     box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  /* Top Navigation */
   .top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 18px;
   }
   .nav-link {
     color: var(--muted);
@@ -54,7 +57,9 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 7px 12px;
+    transition: color 0.15s, border-color 0.15s;
   }
+  .nav-link:hover { color: var(--text); border-color: var(--accent); }
   .user-badge {
     font-size: 12px;
     color: var(--accent);
@@ -65,6 +70,7 @@
     font-weight: 600;
   }
 
+  /* Auth */
   .auth-tabs {
     display: flex;
     gap: 6px;
@@ -85,10 +91,7 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .auth-tab.active {
-    background: var(--accent);
-    color: #fff;
-  }
+  .auth-tab.active { background: var(--accent); color: #fff; }
 
   .input-group { margin-bottom: 14px; }
   .input-group label {
@@ -119,88 +122,255 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
   }
-  .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-main:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-main:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .hidden { display: none !important; }
 
+  /* Upload Stage & Dropzone */
   .dropzone {
     border: 2px dashed var(--border);
     border-radius: 12px;
-    padding: 20px;
+    padding: 18px 14px;
     text-align: center;
     cursor: pointer;
     background: rgba(255, 255, 255, 0.01);
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s, background 0.15s;
   }
+  .dropzone.drag { border-color: var(--accent); background: rgba(108, 140, 255, 0.08); }
   .dropzone input { display: none; }
   .dropzone .hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 
-  .doc-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 280px;
-    overflow-y: auto;
-    margin-top: 10px;
-  }
-  .doc-item {
-    display: flex;
+  .selected-preview-pill {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
+    background: rgba(108, 140, 255, 0.12);
+    border: 1px solid rgba(108, 140, 255, 0.3);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    margin-top: 6px;
+    max-width: 90%;
+  }
+  .selected-preview-pill span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .selected-preview-pill button {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  /* Progress Bar */
+  .progress-wrapper {
+    margin-top: 10px;
     background: #111319;
     border: 1px solid var(--border);
-    padding: 10px 14px;
-    border-radius: 10px;
-    gap: 10px;
+    border-radius: 8px;
+    padding: 10px 12px;
   }
-  .doc-info { overflow: hidden; }
-  .doc-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .doc-actions { display: flex; gap: 6px; }
+  .progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: #232732;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-bar-fill {
+    width: 0%;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.15s ease-out;
+  }
+  .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
 
-  .btn-sm {
+  /* Search Bar */
+  .search-container {
+    display: flex;
+    gap: 8px;
+    margin: 18px 0 14px 0;
+  }
+  .search-wrapper {
+    position: relative;
+    flex: 1;
+  }
+  .search-wrapper input {
+    width: 100%;
+    padding: 9px 32px 9px 12px;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .search-wrapper input:focus { border-color: var(--accent); }
+  .search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    display: none;
+  }
+  .search-clear.show { display: block; }
+  .btn-search {
+    background: var(--card-hover);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* Grid of Medium-Shaped Cards */
+  .files-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 12px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .files-grid::-webkit-scrollbar { width: 5px; }
+  .files-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .file-card {
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .file-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .file-preview {
+    width: 100%;
+    height: 95px;
+    background: #161922;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+    position: relative;
+  }
+  .file-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .file-preview .file-icon {
+    font-size: 38px;
+    user-select: none;
+  }
+
+  .file-details {
+    padding: 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .file-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+  .file-size {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: auto;
+  }
+  .btn-card {
+    flex: 1;
+    text-align: center;
     background: var(--card-hover);
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 11.5px;
-    cursor: pointer;
+    padding: 5px 0;
+    font-size: 11px;
     text-decoration: none;
+    cursor: pointer;
   }
-  .btn-sm.del:hover { background: var(--danger); border-color: var(--danger); }
+  .btn-card:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-card.del:hover { border-color: var(--danger); color: var(--danger); }
 
   .status-text {
     font-size: 12px;
     text-align: center;
-    margin-top: 12px;
+    margin-top: 10px;
     color: var(--muted);
+    min-height: 16px;
   }
+  .status-text.success { color: var(--success); }
+  .status-text.error { color: var(--danger); }
 
   .brand-footer {
-    margin-top: 22px;
-    padding-top: 14px;
+    margin-top: 20px;
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     text-align: center;
     font-size: 11.5px;
     color: var(--muted);
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 10px; background-attachment: scroll; }
+    .vault-card { padding: 18px 14px; }
+    .files-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+    .file-preview { height: 85px; }
   }
 </style>
 </head>
 <body>
 
 <div class="vault-card">
+  <!-- Top Bar -->
   <div class="top-bar">
     <a class="nav-link" href="index.html">← All Tools</a>
     <div id="userBadge" class="user-badge hidden"></div>
-    <button id="logoutBtn" class="btn-sm hidden">Log Out</button>
+    <button id="logoutBtn" class="btn-card" style="flex: initial; padding: 6px 12px;">Log Out</button>
   </div>
 
-  <!-- AUTHENTICATION FORM -->
+  <!-- AUTH FORM -->
   <div id="authSection">
     <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Google Drive Vault</h1>
-    <p style="color: var(--muted); font-size: 13px; margin-bottom: 18px;">Personal cloud storage backed by 5 TB Drive capacity.</p>
+    <p style="color: var(--muted); font-size: 13px; margin-bottom: 18px;">Private cloud storage backed by 5 TB Drive capacity.</p>
 
     <div class="auth-tabs">
       <button type="button" class="auth-tab active" id="tabLogin">Log In</button>
@@ -223,17 +393,45 @@
 
   <!-- VAULT DASHBOARD -->
   <div id="vaultSection" class="hidden">
-    <h1 style="font-size: 19px; font-weight: 700; margin-bottom: 4px;">My Stored Files</h1>
-    <p style="color: var(--muted); font-size: 12.5px; margin-bottom: 16px;">Files are stored inside your dedicated folder on Google Drive.</p>
-
+    <!-- Staged Upload Zone -->
     <div class="dropzone" id="dropzone">
-      <div style="font-size: 13px; font-weight: 500;">Click or drop file to store</div>
-      <div class="hint">PDF, Images, Documents up to 25 MB</div>
+      <div id="dropzoneDefault">
+        <div style="font-size: 13px; font-weight: 500;">Click or drop file to select</div>
+        <div class="hint">PDF, Images, ZIP, Docs up to 25 MB</div>
+      </div>
+      <div id="dropzoneSelected" class="hidden">
+        <div class="selected-preview-pill">
+          📄 <span id="stagedFileName">file.png</span> (<span id="stagedFileSize">0 KB</span>)
+          <button type="button" id="clearStagedBtn" title="Remove selection">✕</button>
+        </div>
+      </div>
       <input type="file" id="fileInput">
     </div>
 
-    <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">Stored Documents:</div>
-    <div class="doc-list" id="docList"></div>
+    <!-- Upload Button & Progress -->
+    <button type="button" class="btn-main" id="uploadBtn" disabled>Upload to Drive</button>
+
+    <div id="progressWrapper" class="progress-wrapper hidden">
+      <div class="progress-bar-bg">
+        <div id="progressBar" class="progress-bar-fill"></div>
+      </div>
+      <div class="progress-text">
+        <span id="progressState">Uploading...</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+      <div class="search-wrapper">
+        <input type="text" id="searchInput" placeholder="Search files by name..." autocomplete="off">
+        <button type="button" class="search-clear" id="searchClear">✕</button>
+      </div>
+      <button type="button" class="btn-search" id="searchBtn">Search</button>
+    </div>
+
+    <!-- Medium Card Grid -->
+    <div class="files-grid" id="filesGrid"></div>
     <div class="status-text" id="vaultStatus"></div>
   </div>
 
@@ -244,13 +442,16 @@
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQyfNa680O4ZnymK6WPQqbkwaVhuPQHbJ0g8gUGJ-V7-Gl9_cYqTX4gWTEl3xxKa0T0g/exec";
-// -----------------------------------------------------
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQyfNa680O4ZnymK6WPQqbkwaVhuPQHbJ0g8gUGJ-V7-Gl9_cYqTX4gWTEl3xxKa0T0g/exec";
+
 
 let isLoginMode = true;
 let currentUser = null;
 let currentPass = null;
+let allFiles = [];
+let stagedFile = null;
 
+// DOM Elements
 const authSection = document.getElementById('authSection');
 const vaultSection = document.getElementById('vaultSection');
 const tabLogin = document.getElementById('tabLogin');
@@ -263,10 +464,26 @@ const userBadge = document.getElementById('userBadge');
 const logoutBtn = document.getElementById('logoutBtn');
 
 const dropzone = document.getElementById('dropzone');
+const dropzoneDefault = document.getElementById('dropzoneDefault');
+const dropzoneSelected = document.getElementById('dropzoneSelected');
+const stagedFileName = document.getElementById('stagedFileName');
+const stagedFileSize = document.getElementById('stagedFileSize');
+const clearStagedBtn = document.getElementById('clearStagedBtn');
 const fileInput = document.getElementById('fileInput');
-const docList = document.getElementById('docList');
+const uploadBtn = document.getElementById('uploadBtn');
+
+const progressWrapper = document.getElementById('progressWrapper');
+const progressBar = document.getElementById('progressBar');
+const progressState = document.getElementById('progressState');
+const progressPct = document.getElementById('progressPct');
+
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+const searchBtn = document.getElementById('searchBtn');
+const filesGrid = document.getElementById('filesGrid');
 const vaultStatus = document.getElementById('vaultStatus');
 
+// Auth Tabs
 tabLogin.addEventListener('click', () => {
   isLoginMode = true;
   tabLogin.classList.add('active');
@@ -283,6 +500,7 @@ tabRegister.addEventListener('click', () => {
   authStatus.textContent = '';
 });
 
+// Login / Register Submit
 authSubmitBtn.addEventListener('click', async () => {
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
@@ -293,15 +511,15 @@ authSubmitBtn.addEventListener('click', async () => {
   }
 
   authSubmitBtn.disabled = true;
-  authStatus.textContent = isLoginMode ? 'Signing in...' : 'Creating Drive folder...';
+  authStatus.textContent = isLoginMode ? 'Verifying...' : 'Creating Drive folder...';
 
   try {
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
         action: isLoginMode ? 'login' : 'register',
-        username: username,
-        password: password
+        username,
+        password
       })
     });
     const data = await res.json();
@@ -316,119 +534,242 @@ authSubmitBtn.addEventListener('click', async () => {
     currentPass = password;
 
     if (!isLoginMode) {
-      alert(`User "${username}" created with its own Drive folder! Logging in...`);
-      // Trigger login automatically
+      alert(`User "${username}" created with personal Drive folder! Logging you in...`);
       const loginRes = await fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'login', username, password })
       });
       const loginData = await loginRes.json();
-      showVault(loginData.files || []);
+      allFiles = loginData.files || [];
     } else {
-      showVault(data.files || []);
+      allFiles = data.files || [];
     }
+
+    showVault();
   } catch (err) {
-    authStatus.textContent = 'Network error: ' + err.message;
+    authStatus.textContent = 'Error: ' + err.message;
   } finally {
     authSubmitBtn.disabled = false;
   }
 });
 
-function showVault(files) {
+function showVault() {
   authSection.classList.add('hidden');
   vaultSection.classList.remove('hidden');
   userBadge.classList.remove('hidden');
   logoutBtn.classList.remove('hidden');
   userBadge.textContent = `User: ${currentUser}`;
-  renderFileList(files);
+  renderGrid(allFiles);
 }
 
 logoutBtn.addEventListener('click', () => location.reload());
 
-dropzone.addEventListener('click', () => fileInput.click());
-dropzone.addEventListener('dragover', e => e.preventDefault());
+// Drag & Drop / Stage Handling (NO auto upload)
+dropzone.addEventListener('click', (e) => {
+  if (e.target !== clearStagedBtn) fileInput.click();
+});
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
 dropzone.addEventListener('drop', e => {
   e.preventDefault();
-  if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) stageFile(e.dataTransfer.files[0]);
 });
 fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+  if (fileInput.files[0]) stageFile(fileInput.files[0]);
 });
 
-function uploadFile(file) {
+function stageFile(file) {
   if (file.size > 25 * 1024 * 1024) {
-    alert("File too large. Maximum file size is 25 MB per upload.");
+    alert("File exceeds maximum 25 MB limit.");
     return;
   }
+  stagedFile = file;
+  stagedFileName.textContent = file.name;
+  stagedFileSize.textContent = formatBytes(file.size);
+  dropzoneDefault.classList.add('hidden');
+  dropzoneSelected.classList.remove('hidden');
+  uploadBtn.disabled = false;
+  uploadBtn.textContent = `Upload "${file.name}" to Drive`;
+}
 
-  vaultStatus.textContent = `Uploading "${file.name}" to Google Drive...`;
+clearStagedBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  clearStagedFile();
+});
+
+function clearStagedFile() {
+  stagedFile = null;
+  fileInput.value = '';
+  dropzoneDefault.classList.remove('hidden');
+  dropzoneSelected.classList.add('hidden');
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Upload to Drive';
+}
+
+// Upload with Progress Bar
+uploadBtn.addEventListener('click', () => {
+  if (!stagedFile) return;
+
+  uploadBtn.disabled = true;
+  progressWrapper.classList.remove('hidden');
+  progressBar.style.width = '0%';
+  progressPct.textContent = '0%';
+  progressState.textContent = 'Reading file...';
+
   const reader = new FileReader();
+  reader.onload = () => {
+    const base64Data = reader.result.split(',')[1];
+    executeUploadWithProgress(stagedFile.name, stagedFile.type, base64Data);
+  };
+  reader.readAsDataURL(stagedFile);
+});
 
-  reader.onload = async (e) => {
-    const base64Data = e.target.result.split(',')[1];
+function executeUploadWithProgress(fileName, mimeType, base64Data) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', SCRIPT_URL, true);
 
-    try {
-      const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'upload',
-          username: currentUser,
-          password: currentPass,
-          fileName: file.name,
-          mimeType: file.type || 'application/octet-stream',
-          fileData: base64Data
-        })
-      });
-      const data = await res.json();
-
-      if (!data.success) throw new Error(data.message);
-
-      vaultStatus.textContent = '✓ Saved to your Drive folder!';
-      fileInput.value = '';
-      refreshFiles();
-    } catch (err) {
-      vaultStatus.textContent = 'Upload failed: ' + err.message;
+  // Track upload packet transfer
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      // Scale 0% - 85% for data transmission
+      const pct = Math.round((e.loaded / e.total) * 85);
+      progressBar.style.width = `${pct}%`;
+      progressPct.textContent = `${pct}%`;
+      progressState.textContent = 'Uploading to Drive...';
     }
   };
 
-  reader.readAsDataURL(file);
+  xhr.onload = () => {
+    progressBar.style.width = '100%';
+    progressPct.textContent = '100%';
+    progressState.textContent = 'Saved to Drive!';
+
+    try {
+      const data = JSON.parse(xhr.responseText);
+      if (data.success) {
+        vaultStatus.className = 'status-text success';
+        vaultStatus.textContent = `✓ "${fileName}" uploaded successfully.`;
+        clearStagedFile();
+        refreshFiles();
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      vaultStatus.className = 'status-text error';
+      vaultStatus.textContent = 'Upload failed: ' + err.message;
+    } finally {
+      setTimeout(() => progressWrapper.classList.add('hidden'), 2200);
+      uploadBtn.disabled = false;
+    }
+  };
+
+  xhr.onerror = () => {
+    vaultStatus.className = 'status-text error';
+    vaultStatus.textContent = 'Network error during upload.';
+    progressWrapper.classList.add('hidden');
+    uploadBtn.disabled = false;
+  };
+
+  const payload = JSON.stringify({
+    action: 'upload',
+    username: currentUser,
+    password: currentPass,
+    fileName: fileName,
+    mimeType: mimeType || 'application/octet-stream',
+    fileData: base64Data
+  });
+
+  xhr.send(payload);
 }
 
+// Refresh Files from Drive
 async function refreshFiles() {
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify({ action: 'login', username: currentUser, password: currentPass })
   });
   const data = await res.json();
-  if (data.success) renderFileList(data.files || []);
+  if (data.success) {
+    allFiles = data.files || [];
+    filterFiles();
+  }
 }
 
-function renderFileList(files) {
-  docList.innerHTML = '';
+// Search Filter Handlers
+searchInput.addEventListener('input', () => {
+  searchClear.classList.toggle('show', searchInput.value.length > 0);
+  filterFiles();
+});
+
+searchBtn.addEventListener('click', filterFiles);
+
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  searchClear.classList.remove('show');
+  filterFiles();
+});
+
+function filterFiles() {
+  const query = searchInput.value.toLowerCase().trim();
+  if (!query) {
+    renderGrid(allFiles);
+    return;
+  }
+  const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query));
+  renderGrid(filtered);
+}
+
+// File Card Renderer with Previews & Specific Icons
+function renderGrid(files) {
+  filesGrid.innerHTML = '';
   if (!files.length) {
-    docList.innerHTML = '<div style="font-size: 12px; color: var(--muted); text-align: center; padding: 12px;">No documents saved yet.</div>';
+    filesGrid.innerHTML = '<div style="grid-column: 1/-1; font-size: 12.5px; color: var(--muted); text-align: center; padding: 24px;">No matching documents found.</div>';
     return;
   }
 
   files.forEach(f => {
-    const item = document.createElement('div');
-    item.className = 'doc-item';
-    const sizeKb = (f.size / 1024).toFixed(1);
+    const ext = f.name.split('.').pop().toLowerCase();
+    const isImg = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext);
 
-    item.innerHTML = `
-      <div class="doc-info">
-        <div class="doc-name">${f.name}</div>
-        <div class="doc-meta">${sizeKb} KB • Stored in Drive</div>
+    const card = document.createElement('div');
+    card.className = 'file-card';
+
+    // Image thumbnail vs Constant File Icon
+    let previewHtml = '';
+    if (isImg) {
+      previewHtml = `
+        <img src="https://drive.google.com/thumbnail?id=${f.id}&sz=w300" 
+             loading="lazy" 
+             alt="${f.name}" 
+             onerror="this.parentElement.innerHTML='<span class=\\'file-icon\\'>🖼️</span>'">
+      `;
+    } else {
+      const icon = getFileIcon(ext);
+      previewHtml = `<span class="file-icon">${icon}</span>`;
+    }
+
+    card.innerHTML = `
+      <div class="file-preview">
+        ${previewHtml}
       </div>
-      <div class="doc-actions">
-        <a class="btn-sm" href="${f.url}" target="_blank">View</a>
-        <button class="btn-sm del" data-id="${f.id}">Delete</button>
+      <div class="file-details">
+        <div>
+          <div class="file-title" title="${f.name}">${f.name}</div>
+          <div class="file-size">${formatBytes(f.size)}</div>
+        </div>
+        <div class="card-actions">
+          <a class="btn-card" href="${f.url}" target="_blank">View</a>
+          <button class="btn-card del" data-id="${f.id}">✕</button>
+        </div>
       </div>
     `;
-    docList.appendChild(item);
+
+    filesGrid.appendChild(card);
   });
 
-  docList.querySelectorAll('.del').forEach(btn => {
+  // Attach Delete Handlers
+  filesGrid.querySelectorAll('.del').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('Move this file to Google Drive trash?')) return;
       vaultStatus.textContent = 'Deleting file...';
@@ -442,6 +783,24 @@ function renderFileList(files) {
       refreshFiles();
     });
   });
+}
+
+function getFileIcon(ext) {
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '📦';
+  if (ext === 'pdf') return '📄';
+  if (['xlsx', 'xls', 'csv'].includes(ext)) return '📊';
+  if (['doc', 'docx', 'txt', 'rtf'].includes(ext)) return '📝';
+  if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return '🎵';
+  if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return '🎬';
+  if (['js', 'html', 'css', 'py', 'json'].includes(ext)) return '💻';
+  return '📁';
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 KB';
+  const k = 1024;
+  if (bytes < k * 1024) return (bytes / k).toFixed(1) + ' KB';
+  return (bytes / (k * k)).toFixed(2) + ' MB';
 }
 </script>
 </body>
