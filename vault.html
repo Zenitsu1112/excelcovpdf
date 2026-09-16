@@ -570,8 +570,8 @@ fileInput.addEventListener('change', () => {
 });
 
 function stageFile(file) {
-  if (file.size > 15 * 1024 * 1024) {
-    alert("File exceeds maximum 15 MB limit for direct upload.");
+  if (file.size > 200 * 1024 * 1024) {
+    alert("File exceeds maximum 200 MB limit for direct upload.");
     return;
   }
   stagedFile = file;
