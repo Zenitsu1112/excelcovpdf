@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drive Family Vault</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card-hover: #222630;
+    --accent: #6c8cff;
+    --accent-hover: #5879f5;
+    --text: #eef1f7;
+    --muted: #9aa3b2;
+    --border: #333947;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)),
+                url('assets/StarryNightCampsite.jpg') no-repeat center center fixed;
+    background-size: cover;
+  }
+
+  .vault-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 26px;
+    width: 100%;
+    max-width: 580px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .nav-link {
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+  }
+  .user-badge {
+    font-size: 12px;
+    color: var(--accent);
+    background: rgba(108, 140, 255, 0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(108, 140, 255, 0.2);
+    font-weight: 600;
+  }
+
+  .auth-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    background: #111319;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .auth-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 8px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .auth-tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .input-group { margin-bottom: 14px; }
+  .input-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 12px;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .input-group input:focus { border-color: var(--accent); }
+
+  .btn-main {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .hidden { display: none !important; }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.01);
+    margin-bottom: 20px;
+  }
+  .dropzone input { display: none; }
+  .dropzone .hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+  .doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 10px;
+  }
+  .doc-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #111319;
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 10px;
+    gap: 10px;
+  }
+  .doc-info { overflow: hidden; }
+  .doc-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .doc-actions { display: flex; gap: 6px; }
+
+  .btn-sm {
+    background: var(--card-hover);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-sm.del:hover { background: var(--danger); border-color: var(--danger); }
+
+  .status-text {
+    font-size: 12px;
+    text-align: center;
+    margin-top: 12px;
+    color: var(--muted);
+  }
+
+  .brand-footer {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="vault-card">
+  <div class="top-bar">
+    <a class="nav-link" href="index.html">← All Tools</a>
+    <div id="userBadge" class="user-badge hidden"></div>
+    <button id="logoutBtn" class="btn-sm hidden">Log Out</button>
+  </div>
+
+  <!-- AUTHENTICATION FORM -->
+  <div id="authSection">
+    <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Google Drive Vault</h1>
+    <p style="color: var(--muted); font-size: 13px; margin-bottom: 18px;">Personal cloud storage backed by 5 TB Drive capacity.</p>
+
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab active" id="tabLogin">Log In</button>
+      <button type="button" class="auth-tab" id="tabRegister">New Account</button>
+    </div>
+
+    <div class="input-group">
+      <label>Username</label>
+      <input type="text" id="usernameInput" placeholder="e.g. 123" autocomplete="off">
+    </div>
+
+    <div class="input-group">
+      <label>Password</label>
+      <input type="password" id="passwordInput" placeholder="Enter password">
+    </div>
+
+    <button type="button" class="btn-main" id="authSubmitBtn">Log In</button>
+    <div class="status-text" id="authStatus"></div>
+  </div>
+
+  <!-- VAULT DASHBOARD -->
+  <div id="vaultSection" class="hidden">
+    <h1 style="font-size: 19px; font-weight: 700; margin-bottom: 4px;">My Stored Files</h1>
+    <p style="color: var(--muted); font-size: 12.5px; margin-bottom: 16px;">Files are stored inside your dedicated folder on Google Drive.</p>
+
+    <div class="dropzone" id="dropzone">
+      <div style="font-size: 13px; font-weight: 500;">Click or drop file to store</div>
+      <div class="hint">PDF, Images, Documents up to 25 MB</div>
+      <input type="file" id="fileInput">
+    </div>
+
+    <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">Stored Documents:</div>
+    <div class="doc-list" id="docList"></div>
+    <div class="status-text" id="vaultStatus"></div>
+  </div>
+
+  <div class="brand-footer">
+    Created & Owned by <strong style="color: var(--text);">Ranjan</strong>
+  </div>
+</div>
+
+<script>
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQyfNa680O4ZnymK6WPQqbkwaVhuPQHbJ0g8gUGJ-V7-Gl9_cYqTX4gWTEl3xxKa0T0g/exec";
+// -----------------------------------------------------
+
+let isLoginMode = true;
+let currentUser = null;
+let currentPass = null;
+
+const authSection = document.getElementById('authSection');
+const vaultSection = document.getElementById('vaultSection');
+const tabLogin = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
+const usernameInput = document.getElementById('usernameInput');
+const passwordInput = document.getElementById('passwordInput');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authStatus = document.getElementById('authStatus');
+const userBadge = document.getElementById('userBadge');
+const logoutBtn = document.getElementById('logoutBtn');
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const docList = document.getElementById('docList');
+const vaultStatus = document.getElementById('vaultStatus');
+
+tabLogin.addEventListener('click', () => {
+  isLoginMode = true;
+  tabLogin.classList.add('active');
+  tabRegister.classList.remove('active');
+  authSubmitBtn.textContent = 'Log In';
+  authStatus.textContent = '';
+});
+
+tabRegister.addEventListener('click', () => {
+  isLoginMode = false;
+  tabRegister.classList.add('active');
+  tabLogin.classList.remove('active');
+  authSubmitBtn.textContent = 'Create User & Folder';
+  authStatus.textContent = '';
+});
+
+authSubmitBtn.addEventListener('click', async () => {
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!username || !password) {
+    authStatus.textContent = 'Please enter both username and password.';
+    return;
+  }
+
+  authSubmitBtn.disabled = true;
+  authStatus.textContent = isLoginMode ? 'Signing in...' : 'Creating Drive folder...';
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: isLoginMode ? 'login' : 'register',
+        username: username,
+        password: password
+      })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      authStatus.textContent = data.message;
+      authSubmitBtn.disabled = false;
+      return;
+    }
+
+    currentUser = username;
+    currentPass = password;
+
+    if (!isLoginMode) {
+      alert(`User "${username}" created with its own Drive folder! Logging in...`);
+      // Trigger login automatically
+      const loginRes = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'login', username, password })
+      });
+      const loginData = await loginRes.json();
+      showVault(loginData.files || []);
+    } else {
+      showVault(data.files || []);
+    }
+  } catch (err) {
+    authStatus.textContent = 'Network error: ' + err.message;
+  } finally {
+    authSubmitBtn.disabled = false;
+  }
+});
+
+function showVault(files) {
+  authSection.classList.add('hidden');
+  vaultSection.classList.remove('hidden');
+  userBadge.classList.remove('hidden');
+  logoutBtn.classList.remove('hidden');
+  userBadge.textContent = `User: ${currentUser}`;
+  renderFileList(files);
+}
+
+logoutBtn.addEventListener('click', () => location.reload());
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => e.preventDefault());
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+});
+
+function uploadFile(file) {
+  if (file.size > 25 * 1024 * 1024) {
+    alert("File too large. Maximum file size is 25 MB per upload.");
+    return;
+  }
+
+  vaultStatus.textContent = `Uploading "${file.name}" to Google Drive...`;
+  const reader = new FileReader();
+
+  reader.onload = async (e) => {
+    const base64Data = e.target.result.split(',')[1];
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'upload',
+          username: currentUser,
+          password: currentPass,
+          fileName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          fileData: base64Data
+        })
+      });
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.message);
+
+      vaultStatus.textContent = '✓ Saved to your Drive folder!';
+      fileInput.value = '';
+      refreshFiles();
+    } catch (err) {
+      vaultStatus.textContent = 'Upload failed: ' + err.message;
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
+
+async function refreshFiles() {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'login', username: currentUser, password: currentPass })
+  });
+  const data = await res.json();
+  if (data.success) renderFileList(data.files || []);
+}
+
+function renderFileList(files) {
+  docList.innerHTML = '';
+  if (!files.length) {
+    docList.innerHTML = '<div style="font-size: 12px; color: var(--muted); text-align: center; padding: 12px;">No documents saved yet.</div>';
+    return;
+  }
+
+  files.forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'doc-item';
+    const sizeKb = (f.size / 1024).toFixed(1);
+
+    item.innerHTML = `
+      <div class="doc-info">
+        <div class="doc-name">${f.name}</div>
+        <div class="doc-meta">${sizeKb} KB • Stored in Drive</div>
+      </div>
+      <div class="doc-actions">
+        <a class="btn-sm" href="${f.url}" target="_blank">View</a>
+        <button class="btn-sm del" data-id="${f.id}">Delete</button>
+      </div>
+    `;
+    docList.appendChild(item);
+  });
+
+  docList.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Move this file to Google Drive trash?')) return;
+      vaultStatus.textContent = 'Deleting file...';
+      const fileId = btn.dataset.id;
+
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', fileId })
+      });
+
+      refreshFiles();
+    });
+  });
+}
+</script>
+</body>
+</html>
