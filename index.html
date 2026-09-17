@@ -19,7 +19,6 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
     min-height: 100vh;
-    /* Starry Night background preserved with dark gradient */
     background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)),
                 url('assets/StarryNightCampsite.jpg') no-repeat center center fixed;
     background-size: cover;
@@ -148,7 +147,6 @@
     color: var(--muted);
   }
 
-  /* Mobile viewport fix for fixed wallpaper distortion */
   @media (max-width: 480px) {
     body {
       background-attachment: scroll;
@@ -161,11 +159,10 @@
 </head>
 <body>
 
-<!-- The popup window sitting directly in front of the background -->
 <div class="window-overlay">
   <div class="choice-window">
     <h2>Choose a Tool</h2>
-    <p class="sub">Select the converter or optimizer you want to use</p>
+    <p class="sub">Select the converter, optimizer, or storage tool</p>
 
     <div class="choices-list">
       <a href="image-to-pdf.html" class="choice-btn">
@@ -186,14 +183,14 @@
         <span class="arrow">→</span>
       </a>
 
-      <a href="vault.html" class=choice-btn"> 
-        <div class="icon">🗃️</dv> 
-          <div cass="info">
-            <span class="name">File Vault</span>
-            <span class="desc">Vault to store files and documents</span>
-          </div>
-          <span class="arrow">→</span>
-      </a> 
+      <a href="vault.html" class="choice-btn">
+        <div class="icon">🔐</div>
+        <div class="info">
+          <span class="name">Drive File Vault</span>
+          <span class="desc">Private document & large file storage</span>
+        </div>
+        <span class="arrow">→</span>
+      </a>
 
       <a href="image-compressor.html" class="choice-btn">
         <div class="icon">🗜️</div>
