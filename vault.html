@@ -442,7 +442,10 @@
 <script>
 // --- PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE ---
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQyfNa680O4ZnymK6WPQqbkwaVhuPQHbJ0g8gUGJ-V7-Gl9_cYqTX4gWTEl3xxKa0T0g/exec";
-// -----------------------------------------------------
+
+// 1 Hour Session Timeout (60 min * 60 sec * 1000 ms)
+const SESSION_KEY = "vault_user_session";
+const SESSION_LIFETIME = 60 * 60 * 1000; 
 
 let isLoginMode = true;
 let currentUser = null;
@@ -450,6 +453,7 @@ let currentPass = null;
 let allFiles = [];
 let stagedFile = null;
 
+// DOM Elements
 const authSection = document.getElementById('authSection');
 const vaultSection = document.getElementById('vaultSection');
 const tabLogin = document.getElementById('tabLogin');
@@ -480,6 +484,74 @@ const searchClear = document.getElementById('searchClear');
 const searchBtn = document.getElementById('searchBtn');
 const filesGrid = document.getElementById('filesGrid');
 const vaultStatus = document.getElementById('vaultStatus');
+
+// --- SESSION STORAGE HELPERS ---
+
+function saveSession(user, pass) {
+  const sessionData = {
+    username: user,
+    password: pass,
+    expiresAt: Date.now() + SESSION_LIFETIME
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+}
+
+function getStoredSession() {
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
+
+  try {
+    const data = JSON.parse(raw);
+    // If the 1-hour window has expired, clear it
+    if (Date.now() > data.expiresAt) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    localStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// Check session immediately on page load
+async function checkActiveSession() {
+  const session = getStoredSession();
+  if (!session) return;
+
+  currentUser = session.username;
+  currentPass = session.password;
+
+  // Render dashboard immediately while fetching latest files
+  showVault();
+  vaultStatus.textContent = "Restoring session...";
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', username: currentUser, password: currentPass })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      allFiles = data.files || [];
+      renderGrid(allFiles);
+      vaultStatus.textContent = "";
+    } else {
+      // Credentials were changed or invalid -> force re-login
+      clearSession();
+      location.reload();
+    }
+  } catch (err) {
+    vaultStatus.textContent = "Failed to sync files: " + err.message;
+  }
+}
+
+// --- AUTHENTICATION ---
 
 tabLogin.addEventListener('click', () => {
   isLoginMode = true;
@@ -525,6 +597,9 @@ authSubmitBtn.addEventListener('click', async () => {
     currentUser = username;
     currentPass = password;
 
+    // Save session with 1-hour expiry
+    saveSession(currentUser, currentPass);
+
     if (!isLoginMode) {
       alert(`User "${username}" created! Logging you in...`);
       const loginRes = await fetch(SCRIPT_URL, {
@@ -554,9 +629,14 @@ function showVault() {
   renderGrid(allFiles);
 }
 
-logoutBtn.addEventListener('click', () => location.reload());
+// Clear storage when manually clicking Log Out
+logoutBtn.addEventListener('click', () => {
+  clearSession();
+  location.reload();
+});
 
-// Staging (Up to 1 GB limit)
+// --- FILE STAGING & DIRECT UPLOAD (1 GB) ---
+
 dropzone.addEventListener('click', (e) => {
   if (e.target !== clearStagedBtn) fileInput.click();
 });
@@ -572,7 +652,7 @@ fileInput.addEventListener('change', () => {
 });
 
 function stageFile(file) {
-  const MAX_SIZE_MB = 1024; // 1 GB ceiling
+  const MAX_SIZE_MB = 1024; // 1 GB limit
   if (file.size > MAX_SIZE_MB * 1024 * 1024) {
     alert(`File exceeds maximum ${MAX_SIZE_MB} MB limit.`);
     return;
@@ -600,7 +680,6 @@ function clearStagedFile() {
   uploadBtn.textContent = 'Upload to Drive';
 }
 
-// Resumable Direct Upload Pipeline (Fixes Network Error & Supports 1 GB)
 uploadBtn.addEventListener('click', async () => {
   if (!stagedFile) return;
 
@@ -611,7 +690,6 @@ uploadBtn.addEventListener('click', async () => {
   progressState.textContent = 'Requesting Drive upload slot...';
 
   try {
-    // 1. Fetch direct resumable URL from Apps Script via fetch (handles 302 cleanly)
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
@@ -627,9 +705,7 @@ uploadBtn.addEventListener('click', async () => {
     const ticket = await res.json();
     if (!ticket.success) throw new Error(ticket.message);
 
-    // 2. Stream binary directly to Google Drive (No redirect, no network error)
     streamFileDirectly(ticket.uploadUrl, stagedFile);
-
   } catch (err) {
     vaultStatus.className = 'status-text error';
     vaultStatus.textContent = 'Upload error: ' + err.message;
@@ -643,7 +719,6 @@ function streamFileDirectly(uploadUrl, file) {
   xhr.open('PUT', uploadUrl, true);
   xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
 
-  // Real-time byte tracking directly to Google servers
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       const pct = Math.round((e.loaded / e.total) * 100);
@@ -692,7 +767,8 @@ async function refreshFiles() {
   }
 }
 
-// Live Search Handlers
+// --- SEARCH ENGINE ---
+
 searchInput.addEventListener('input', () => {
   searchClear.classList.toggle('show', searchInput.value.length > 0);
   filterFiles();
@@ -715,6 +791,8 @@ function filterFiles() {
   const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query));
   renderGrid(filtered);
 }
+
+// --- GRID RENDERER ---
 
 function renderGrid(files) {
   filesGrid.innerHTML = '';
@@ -796,6 +874,9 @@ function formatBytes(bytes) {
   if (bytes < k * k * 1024) return (bytes / (k * k)).toFixed(2) + ' MB';
   return (bytes / (k * k * k)).toFixed(2) + ' GB';
 }
+
+// Trigger session check when script runs
+checkActiveSession();
 </script>
 </body>
 </html>
