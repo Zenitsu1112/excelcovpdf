@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vault Admin Control</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card-hover: #222630;
+    --accent: #6c8cff;
+    --accent-hover: #5879f5;
+    --text: #eef1f7;
+    --muted: #9aa3b2;
+    --border: #333947;
+    --danger: #ef4444;
+    --success: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)),
+                url('assets/StarryNightCampsite.jpg') no-repeat center center fixed;
+    background-size: cover;
+  }
+
+  .admin-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 26px;
+    width: 100%;
+    max-width: 860px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .nav-link {
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .nav-link:hover { color: var(--text); border-color: var(--accent); }
+  
+  .badge-admin {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Login Form */
+  .auth-box { max-width: 380px; margin: 40px auto; text-align: center; }
+  .auth-box input {
+    width: 100%;
+    padding: 12px;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    margin: 14px 0;
+    outline: none;
+  }
+  .auth-box input:focus { border-color: var(--accent); }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn-sm { padding: 5px 9px; font-size: 11.5px; border-radius: 6px; }
+  .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-pill {
+    background: #111319;
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    border-radius: 10px;
+    flex: 1;
+  }
+  .stat-pill .num { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .stat-pill .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Users Table */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #111319;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
+  }
+  th {
+    background: #161922;
+    padding: 12px 14px;
+    font-size: 11.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  .pass-code {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .action-group { display: flex; gap: 6px; }
+
+  /* Inspect Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 99;
+  }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .modal-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+    max-height: 360px;
+  }
+  .modal-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #111319;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+
+  .status-text {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  .brand-footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="admin-card">
+  <div class="top-bar">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a class="nav-link" href="vault.html">← Back to Vault</a>
+      <span class="badge-admin">Admin Control</span>
+    </div>
+    <button id="logoutBtn" class="btn btn-sm btn-outline hidden">Lock Dashboard</button>
+  </div>
+
+  <!-- AUTH FORM -->
+  <div id="authSection" class="auth-box">
+    <h2 style="font-size: 18px; margin-bottom: 4px;">Master Access</h2>
+    <p style="font-size: 12px; color: var(--muted);">Enter master password to load user accounts and Drive folders.</p>
+    <input type="password" id="adminKeyInput" placeholder="Master admin password..." autocomplete="off">
+    <button class="btn" style="width: 100%;" id="adminLoginBtn">Authenticate</button>
+    <div class="status-text" id="authStatus"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashSection" class="hidden">
+    <div class="stats-bar">
+      <div class="stat-pill">
+        <div class="num" id="totalUsers">0</div>
+        <div class="label">Registered Accounts</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="activeFolders">0</div>
+        <div class="label">Isolated Drive Folders</div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="font-size: 14px; font-weight: 600;">Active User Registry</h3>
+      <button class="btn btn-sm btn-outline" id="refreshBtn">↻ Refresh</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Password</th>
+            <th>Files</th>
+            <th>Drive Folder</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+    <div class="status-text" id="dashStatus"></div>
+  </div>
+
+  <div class="brand-footer">
+    Created & Owned by <strong style="color: var(--text);">Ranjan</strong>
+  </div>
+</div>
+
+<!-- FILE INSPECT MODAL -->
+<div id="inspectModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 id="inspectTitle" style="font-size: 14px;">User Files</h4>
+      <button class="btn btn-sm btn-outline" id="closeModalBtn">✕</button>
+    </div>
+    <div class="modal-list" id="modalFileList"></div>
+    <button class="btn btn-outline" id="closeModalBtn2">Close</button>
+  </div>
+</div>
+
+<script>
+// --- PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE ---
+const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+// -----------------------------------------------------
+
+// 1 Hour Session Lifetime
+const ADMIN_SESSION_KEY = "vault_admin_session";
+const SESSION_LIFETIME = 60 * 60 * 1000; 
+
+let cachedAdminKey = "";
+let usersCache = [];
+
+const authSection = document.getElementById('authSection');
+const dashSection = document.getElementById('dashSection');
+const adminKeyInput = document.getElementById('adminKeyInput');
+const adminLoginBtn = document.getElementById('adminLoginBtn');
+const authStatus = document.getElementById('authStatus');
+const logoutBtn = document.getElementById('logoutBtn');
+
+const totalUsers = document.getElementById('totalUsers');
+const activeFolders = document.getElementById('activeFolders');
+const userTableBody = document.getElementById('userTableBody');
+const refreshBtn = document.getElementById('refreshBtn');
+const dashStatus = document.getElementById('dashStatus');
+
+const inspectModal = document.getElementById('inspectModal');
+const inspectTitle = document.getElementById('inspectTitle');
+const modalFileList = document.getElementById('modalFileList');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const closeModalBtn2 = document.getElementById('closeModalBtn2');
+
+// --- SESSION STORAGE HELPERS ---
+
+function saveAdminSession(key) {
+  const session = {
+    key: key,
+    expiresAt: Date.now() + SESSION_LIFETIME
+  };
+  localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+}
+
+function getStoredAdminSession() {
+  const raw = localStorage.getItem(ADMIN_SESSION_KEY);
+  if (!raw) return null;
+
+  try {
+    const data = JSON.parse(raw);
+    if (Date.now() > data.expiresAt) {
+      localStorage.removeItem(ADMIN_SESSION_KEY);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    localStorage.removeItem(ADMIN_SESSION_KEY);
+    return null;
+  }
+}
+
+function checkAdminSession() {
+  const session = getStoredAdminSession();
+  if (session && session.key) {
+    cachedAdminKey = session.key;
+    loadDashboard();
+  }
+}
+
+// Authenticate manually
+adminLoginBtn.addEventListener('click', () => {
+  const key = adminKeyInput.value.trim();
+  if (!key) {
+    authStatus.textContent = "Please enter the master password.";
+    return;
+  }
+  cachedAdminKey = key;
+  authStatus.textContent = 'Verifying credentials...';
+  loadDashboard(true);
+});
+
+// Logout
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem(ADMIN_SESSION_KEY);
+  location.reload();
+});
+
+// Load Dashboard Data
+async function loadDashboard(isManualLogin = false) {
+  dashStatus.textContent = 'Loading database from Google Drive...';
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'admin_get_users', adminKey: cachedAdminKey })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      authStatus.textContent = data.message;
+      localStorage.removeItem(ADMIN_SESSION_KEY);
+      return;
+    }
+
+    if (isManualLogin) {
+      saveAdminSession(cachedAdminKey);
+    }
+
+    authSection.classList.add('hidden');
+    dashSection.classList.remove('hidden');
+    logoutBtn.classList.remove('hidden');
+
+    usersCache = data.users || [];
+    renderUsers(usersCache);
+    dashStatus.textContent = '';
+  } catch (err) {
+    if (isManualLogin) {
+      authStatus.textContent = 'Network error: ' + err.message;
+    } else {
+      dashStatus.textContent = 'Failed to refresh: ' + err.message;
+    }
+  }
+}
+
+refreshBtn.addEventListener('click', () => loadDashboard(false));
+
+function renderUsers(users) {
+  totalUsers.textContent = users.length;
+  activeFolders.textContent = users.filter(u => u.fileCount >= 0).length;
+  userTableBody.innerHTML = '';
+
+  if (!users.length) {
+    userTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px;">No users found in database.</td></tr>';
+    return;
+  }
+
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${u.username}</strong></td>
+      <td><span class="pass-code">${u.password}</span></td>
+      <td>${u.fileCount >= 0 ? u.fileCount + ' files' : '<span style="color:var(--danger)">Folder Missing</span>'}</td>
+      <td><a class="nav-link" href="${u.folderUrl}" target="_blank">Open Drive ↗</a></td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-sm btn-outline inspect-btn" data-user="${u.username}" data-folder="${u.folderId}">Inspect</button>
+          <button class="btn btn-sm btn-outline pw-btn" data-user="${u.username}">Reset PW</button>
+          <button class="btn btn-sm btn-danger del-btn" data-user="${u.username}">Delete</button>
+        </div>
+      </td>
+    `;
+    userTableBody.appendChild(tr);
+  });
+
+  // Table Handlers
+  userTableBody.querySelectorAll('.inspect-btn').forEach(btn => {
+    btn.addEventListener('click', () => inspectUser(btn.dataset.user, btn.dataset.folder));
+  });
+
+  userTableBody.querySelectorAll('.pw-btn').forEach(btn => {
+    btn.addEventListener('click', () => changePassword(btn.dataset.user));
+  });
+
+  userTableBody.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteUser(btn.dataset.user));
+  });
+}
+
+// Inspect User's Files
+async function inspectUser(username, folderId) {
+  inspectTitle.textContent = `Files in "${username}" Folder`;
+  modalFileList.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 12px;">Loading files...</div>';
+  inspectModal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'admin_get_user_files',
+        adminKey: cachedAdminKey,
+        folderId: folderId
+      })
+    });
+    const data = await res.json();
+    const files = data.files || [];
+
+    if (!files.length) {
+      modalFileList.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 12px;">Folder is empty.</div>';
+      return;
+    }
+
+    modalFileList.innerHTML = '';
+    files.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'modal-item';
+      const sizeKb = (f.size / 1024).toFixed(1);
+      row.innerHTML = `
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%; font-weight: 500;">${f.name}</span>
+        <span style="color: var(--muted); font-size: 11px;">${sizeKb} KB</span>
+        <a class="nav-link" style="padding: 3px 8px; font-size: 11px;" href="${f.url}" target="_blank">View ↗</a>
+      `;
+      modalFileList.appendChild(row);
+    });
+  } catch (err) {
+    modalFileList.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 12px;">Error: ${err.message}</div>`;
+  }
+}
+
+closeModalBtn.addEventListener('click', () => inspectModal.classList.add('hidden'));
+closeModalBtn2.addEventListener('click', () => inspectModal.classList.add('hidden'));
+
+// Change Password Action
+async function changePassword(username) {
+  const newPass = prompt(`Enter new password for "${username}":`);
+  if (!newPass || !newPass.trim()) return;
+
+  dashStatus.textContent = `Updating password for ${username}...`;
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'admin_change_password',
+      adminKey: cachedAdminKey,
+      username: username,
+      newPassword: newPass.trim()
+    })
+  });
+  const data = await res.json();
+  alert(data.message);
+  loadDashboard(false);
+}
+
+// Delete User & Trash Folder
+async function deleteUser(username) {
+  const confirmDel = confirm(`Are you sure you want to permanently delete user "${username}" and trash their folder from Drive?`);
+  if (!confirmDel) return;
+
+  dashStatus.textContent = `Deleting user ${username}...`;
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'admin_delete_user',
+      adminKey: cachedAdminKey,
+      username: username
+    })
+  });
+  const data = await res.json();
+  alert(data.message);
+  loadDashboard(false);
+}
+
+// Auto-login on page load if session is valid
+checkAdminSession();
+</script>
+</body>
+</html>
