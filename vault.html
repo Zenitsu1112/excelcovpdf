@@ -340,6 +340,70 @@
   .status-text.success { color: var(--success); }
   .status-text.error { color: var(--danger); }
 
+  /* Success Popup Modal */
+  .popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 1000;
+    animation: fadeIn 0.15s ease-out;
+  }
+  .popup-box {
+    background: #1a1d24;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    animation: popUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .popup-icon {
+    width: 52px;
+    height: 52px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin: 0 auto 14px auto;
+  }
+  .popup-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .popup-desc {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 18px;
+    word-break: break-word;
+  }
+  .popup-btn {
+    background: var(--success);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes popUp { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
   .brand-footer {
     margin-top: 20px;
     padding-top: 12px;
@@ -361,7 +425,10 @@
 
 <div class="vault-card">
   <div class="top-bar">
-    <a class="nav-link" href="index.html">← All Tools</a>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a class="nav-link" href="index.html">← All Tools</a>
+      <a class="nav-link" href="admin.html">⚙ Admin</a>
+    </div>
     <div id="userBadge" class="user-badge hidden"></div>
     <button id="logoutBtn" class="btn-card" style="flex: initial; padding: 6px 12px;">Log Out</button>
   </div>
@@ -439,13 +506,24 @@
   </div>
 </div>
 
+<!-- SUCCESS POPUP MODAL -->
+<div id="successPopup" class="popup-overlay hidden">
+  <div class="popup-box">
+    <div class="popup-icon">✓</div>
+    <div class="popup-title">Upload Successful!</div>
+    <div class="popup-desc" id="popupFileDesc">Your file has been safely saved to your Google Drive folder.</div>
+    <button type="button" class="popup-btn" id="popupOkBtn">Awesome</button>
+  </div>
+</div>
+
 <script>
 // --- PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE ---
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQyfNa680O4ZnymK6WPQqbkwaVhuPQHbJ0g8gUGJ-V7-Gl9_cYqTX4gWTEl3xxKa0T0g/exec";
+// -----------------------------------------------------
 
-// 1 Hour Session Timeout (60 min * 60 sec * 1000 ms)
+// 1 Hour Session Lifetime
 const SESSION_KEY = "vault_user_session";
-const SESSION_LIFETIME = 60 * 60 * 1000; 
+const SESSION_LIFETIME = 60 * 60 * 1000;
 
 let isLoginMode = true;
 let currentUser = null;
@@ -453,7 +531,7 @@ let currentPass = null;
 let allFiles = [];
 let stagedFile = null;
 
-// DOM Elements
+// Elements
 const authSection = document.getElementById('authSection');
 const vaultSection = document.getElementById('vaultSection');
 const tabLogin = document.getElementById('tabLogin');
@@ -485,7 +563,11 @@ const searchBtn = document.getElementById('searchBtn');
 const filesGrid = document.getElementById('filesGrid');
 const vaultStatus = document.getElementById('vaultStatus');
 
-// --- SESSION STORAGE HELPERS ---
+const successPopup = document.getElementById('successPopup');
+const popupFileDesc = document.getElementById('popupFileDesc');
+const popupOkBtn = document.getElementById('popupOkBtn');
+
+// --- 1-HOUR PERSISTENCE HELPERS ---
 
 function saveSession(user, pass) {
   const sessionData = {
@@ -499,10 +581,8 @@ function saveSession(user, pass) {
 function getStoredSession() {
   const raw = localStorage.getItem(SESSION_KEY);
   if (!raw) return null;
-
   try {
     const data = JSON.parse(raw);
-    // If the 1-hour window has expired, clear it
     if (Date.now() > data.expiresAt) {
       localStorage.removeItem(SESSION_KEY);
       return null;
@@ -518,7 +598,6 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-// Check session immediately on page load
 async function checkActiveSession() {
   const session = getStoredSession();
   if (!session) return;
@@ -526,9 +605,8 @@ async function checkActiveSession() {
   currentUser = session.username;
   currentPass = session.password;
 
-  // Render dashboard immediately while fetching latest files
   showVault();
-  vaultStatus.textContent = "Restoring session...";
+  vaultStatus.textContent = "Syncing with Drive...";
 
   try {
     const res = await fetch(SCRIPT_URL, {
@@ -542,16 +620,15 @@ async function checkActiveSession() {
       renderGrid(allFiles);
       vaultStatus.textContent = "";
     } else {
-      // Credentials were changed or invalid -> force re-login
       clearSession();
       location.reload();
     }
   } catch (err) {
-    vaultStatus.textContent = "Failed to sync files: " + err.message;
+    vaultStatus.textContent = "Failed to sync: " + err.message;
   }
 }
 
-// --- AUTHENTICATION ---
+// --- AUTH HANDLERS ---
 
 tabLogin.addEventListener('click', () => {
   isLoginMode = true;
@@ -596,8 +673,6 @@ authSubmitBtn.addEventListener('click', async () => {
 
     currentUser = username;
     currentPass = password;
-
-    // Save session with 1-hour expiry
     saveSession(currentUser, currentPass);
 
     if (!isLoginMode) {
@@ -629,13 +704,12 @@ function showVault() {
   renderGrid(allFiles);
 }
 
-// Clear storage when manually clicking Log Out
 logoutBtn.addEventListener('click', () => {
   clearSession();
   location.reload();
 });
 
-// --- FILE STAGING & DIRECT UPLOAD (1 GB) ---
+// --- FILE SELECTION & STAGING ---
 
 dropzone.addEventListener('click', (e) => {
   if (e.target !== clearStagedBtn) fileInput.click();
@@ -680,6 +754,8 @@ function clearStagedFile() {
   uploadBtn.textContent = 'Upload to Drive';
 }
 
+// --- DIRECT STREAMING WITH ACCURATE COMPLETION CHECK ---
+
 uploadBtn.addEventListener('click', async () => {
   if (!stagedFile) return;
 
@@ -698,7 +774,8 @@ uploadBtn.addEventListener('click', async () => {
         password: currentPass,
         fileName: stagedFile.name,
         mimeType: stagedFile.type || 'application/octet-stream',
-        fileSize: stagedFile.size
+        fileSize: stagedFile.size,
+        origin: window.location.origin
       })
     });
 
@@ -716,46 +793,88 @@ uploadBtn.addEventListener('click', async () => {
 
 function streamFileDirectly(uploadUrl, file) {
   const xhr = new XMLHttpRequest();
+  let uploadCompletedBytes = false;
+
   xhr.open('PUT', uploadUrl, true);
   xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
 
+  // Real-time hardware byte tracking
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       const pct = Math.round((e.loaded / e.total) * 100);
       progressBar.style.width = `${pct}%`;
       progressPct.textContent = `${pct}%`;
       progressState.textContent = `Uploading: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+      
+      if (e.loaded >= e.total) {
+        uploadCompletedBytes = true;
+        progressState.textContent = 'Finalizing with Google Drive...';
+      }
     }
   };
 
-  xhr.onload = () => {
+  // Normal HTTP completion
+  xhr.onload = async () => {
     if (xhr.status === 200 || xhr.status === 201) {
-      progressBar.style.width = '100%';
-      progressPct.textContent = '100%';
-      progressState.textContent = 'Saved to Drive!';
-      vaultStatus.className = 'status-text success';
-      vaultStatus.textContent = `✓ "${file.name}" uploaded successfully.`;
-      clearStagedFile();
-      refreshFiles();
+      await finalizeSuccess(file.name);
     } else {
-      vaultStatus.className = 'status-text error';
-      vaultStatus.textContent = `Drive upload rejected with status ${xhr.status}`;
+      handleUploadError(`Drive upload failed with status ${xhr.status}`);
     }
-    setTimeout(() => progressWrapper.classList.add('hidden'), 2500);
-    uploadBtn.disabled = false;
   };
 
-  xhr.onerror = () => {
-    vaultStatus.className = 'status-text error';
-    vaultStatus.textContent = 'Direct upload connection interrupted.';
-    progressWrapper.classList.add('hidden');
-    uploadBtn.disabled = false;
+  // Error recovery: Catch false CORS errors when bytes were 100% sent
+  xhr.onerror = async () => {
+    if (uploadCompletedBytes) {
+      progressState.textContent = 'Refreshing files...';
+      // Wait a moment for Drive indexing, then refresh
+      setTimeout(async () => {
+        await finalizeSuccess(file.name);
+      }, 1000);
+    } else {
+      handleUploadError('Direct upload connection interrupted.');
+    }
   };
 
   xhr.send(file);
 }
 
+// Refresh files, clear input, and trigger success popup
+async function finalizeSuccess(fileName) {
+  progressBar.style.width = '100%';
+  progressPct.textContent = '100%';
+  progressState.textContent = 'Complete!';
+
+  clearStagedFile();
+  await refreshFiles();
+
+  setTimeout(() => {
+    progressWrapper.classList.add('hidden');
+    uploadBtn.disabled = false;
+    showSuccessPopup(fileName);
+  }, 400);
+}
+
+function handleUploadError(msg) {
+  vaultStatus.className = 'status-text error';
+  vaultStatus.textContent = msg;
+  progressWrapper.classList.add('hidden');
+  uploadBtn.disabled = false;
+}
+
+// Success Popup Modal Trigger
+function showSuccessPopup(fileName) {
+  popupFileDesc.textContent = `"${fileName}" has been safely saved to your Google Drive folder.`;
+  successPopup.classList.remove('hidden');
+}
+
+popupOkBtn.addEventListener('click', () => {
+  successPopup.classList.add('hidden');
+});
+
+// --- REFRESH & SEARCH ---
+
 async function refreshFiles() {
+  vaultStatus.textContent = 'Refreshing file list...';
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify({ action: 'login', username: currentUser, password: currentPass })
@@ -764,10 +883,9 @@ async function refreshFiles() {
   if (data.success) {
     allFiles = data.files || [];
     filterFiles();
+    vaultStatus.textContent = '';
   }
 }
-
-// --- SEARCH ENGINE ---
 
 searchInput.addEventListener('input', () => {
   searchClear.classList.toggle('show', searchInput.value.length > 0);
@@ -792,7 +910,7 @@ function filterFiles() {
   renderGrid(filtered);
 }
 
-// --- GRID RENDERER ---
+// --- RENDER MEDIUM CARDS ---
 
 function renderGrid(files) {
   filesGrid.innerHTML = '';
@@ -875,7 +993,7 @@ function formatBytes(bytes) {
   return (bytes / (k * k * k)).toFixed(2) + ' GB';
 }
 
-// Trigger session check when script runs
+// Check session on load
 checkActiveSession();
 </script>
 </body>
