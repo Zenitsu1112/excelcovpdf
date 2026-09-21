@@ -25,15 +25,4 @@ Deployable on **GitHub Pages** with zero build configuration.
 
 ---
 
-## 🛠️ How It Solves the Portal `NaN` Bug
 
-Portal data exporters (e.g., e-Vidyavahini, HRMS) frequently serialize missing serial numbers, empty dates, or undefined numeric formulas directly into spreadsheet XML as raw `NaN` strings:
-
-```xml
-<!-- Corrupted Portal XML Output inside xl/worksheets/sheet1.xml -->
-<row r="2">
-    <c r="A2"><v>NaN</v></c>
-    <c r="B2" t="s"><v>0</v></c>
-    <c r="G2"><v>NaN</v></c>
-    <c r="J2" t="s"><v>1</v></c>
-</row>
