@@ -15,6 +15,7 @@
     --muted: #9aa3b2;
     --border: #333947;
     --danger: #ef4444;
+    --danger-bg: rgba(239, 68, 68, 0.15);
     --success: #22c55e;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,7 +38,7 @@
     border-radius: 18px;
     padding: 26px;
     width: 100%;
-    max-width: 860px;
+    max-width: 880px;
     box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
@@ -60,7 +61,7 @@
   .nav-link:hover { color: var(--text); border-color: var(--accent); }
   
   .badge-admin {
-    background: rgba(239, 68, 68, 0.15);
+    background: var(--danger-bg);
     color: #f87171;
     border: 1px solid rgba(239, 68, 68, 0.3);
     font-size: 11px;
@@ -100,7 +101,7 @@
   }
   .btn:hover { background: var(--accent-hover); }
   .btn-sm { padding: 5px 9px; font-size: 11.5px; border-radius: 6px; }
-  .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
   .btn-danger:hover { background: var(--danger); color: #fff; }
   .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
   .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
@@ -120,6 +121,43 @@
   }
   .stat-pill .num { font-size: 20px; font-weight: 700; color: var(--accent); }
   .stat-pill .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .stat-pill.warn .num { color: var(--danger); }
+
+  /* Search & Controls */
+  .controls-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .search-wrapper {
+    position: relative;
+    flex: 1;
+  }
+  .search-wrapper input {
+    width: 100%;
+    padding: 9px 32px 9px 12px;
+    background: #111319;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .search-wrapper input:focus { border-color: var(--accent); }
+  .search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    display: none;
+  }
+  .search-clear.show { display: block; }
 
   /* Users Table */
   .table-wrap {
@@ -156,13 +194,25 @@
     font-size: 12px;
     letter-spacing: 0.5px;
   }
+  .locked-badge {
+    display: inline-block;
+    background: var(--danger-bg);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    text-transform: uppercase;
+  }
   .action-group { display: flex; gap: 6px; }
 
   /* Inspect Modal */
   .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -253,10 +303,18 @@
         <div class="num" id="activeFolders">0</div>
         <div class="label">Isolated Drive Folders</div>
       </div>
+      <div class="stat-pill warn">
+        <div class="num" id="lockedCount">0</div>
+        <div class="label">Locked (Strike 3)</div>
+      </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <h3 style="font-size: 14px; font-weight: 600;">Active User Registry</h3>
+    <!-- Search & Refresh Control Bar -->
+    <div class="controls-bar">
+      <div class="search-wrapper">
+        <input type="text" id="userSearchInput" placeholder="Filter by username or folder ID..." autocomplete="off">
+        <button type="button" class="search-clear" id="userSearchClear">✕</button>
+      </div>
       <button class="btn btn-sm btn-outline" id="refreshBtn">↻ Refresh</button>
     </div>
 
@@ -282,7 +340,7 @@
   </div>
 </div>
 
-<!-- FILE INSPECT MODAL -->
+<!-- FILE INSPECTION MODAL -->
 <div id="inspectModal" class="modal-overlay hidden">
   <div class="modal">
     <div class="modal-header">
@@ -301,11 +359,12 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQyfNa680O4ZnymK6WP
 
 // 1 Hour Session Lifetime
 const ADMIN_SESSION_KEY = "vault_admin_session";
-const SESSION_LIFETIME = 60 * 60 * 1000; 
+const SESSION_LIFETIME = 60 * 60 * 1000;
 
 let cachedAdminKey = "";
 let usersCache = [];
 
+// DOM Elements
 const authSection = document.getElementById('authSection');
 const dashSection = document.getElementById('dashSection');
 const adminKeyInput = document.getElementById('adminKeyInput');
@@ -315,9 +374,13 @@ const logoutBtn = document.getElementById('logoutBtn');
 
 const totalUsers = document.getElementById('totalUsers');
 const activeFolders = document.getElementById('activeFolders');
+const lockedCount = document.getElementById('lockedCount');
 const userTableBody = document.getElementById('userTableBody');
 const refreshBtn = document.getElementById('refreshBtn');
 const dashStatus = document.getElementById('dashStatus');
+
+const userSearchInput = document.getElementById('userSearchInput');
+const userSearchClear = document.getElementById('userSearchClear');
 
 const inspectModal = document.getElementById('inspectModal');
 const inspectTitle = document.getElementById('inspectTitle');
@@ -325,7 +388,7 @@ const modalFileList = document.getElementById('modalFileList');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const closeModalBtn2 = document.getElementById('closeModalBtn2');
 
-// --- SESSION STORAGE HELPERS ---
+// --- 1-HOUR PERSISTENCE HELPERS ---
 
 function saveAdminSession(key) {
   const session = {
@@ -356,7 +419,7 @@ function checkAdminSession() {
   const session = getStoredAdminSession();
   if (session && session.key) {
     cachedAdminKey = session.key;
-    loadDashboard();
+    loadDashboard(false);
   }
 }
 
@@ -404,7 +467,7 @@ async function loadDashboard(isManualLogin = false) {
     logoutBtn.classList.remove('hidden');
 
     usersCache = data.users || [];
-    renderUsers(usersCache);
+    filterUsers();
     dashStatus.textContent = '';
   } catch (err) {
     if (isManualLogin) {
@@ -417,27 +480,65 @@ async function loadDashboard(isManualLogin = false) {
 
 refreshBtn.addEventListener('click', () => loadDashboard(false));
 
+// --- SEARCH / FILTER ENGINE ---
+
+userSearchInput.addEventListener('input', () => {
+  userSearchClear.classList.toggle('show', userSearchInput.value.length > 0);
+  filterUsers();
+});
+
+userSearchClear.addEventListener('click', () => {
+  userSearchInput.value = '';
+  userSearchClear.classList.remove('show');
+  filterUsers();
+});
+
+function filterUsers() {
+  const q = userSearchInput.value.toLowerCase().trim();
+  if (!q) {
+    renderUsers(usersCache);
+    return;
+  }
+  const filtered = usersCache.filter(u => 
+    u.username.toLowerCase().includes(q) || 
+    u.folderId.toLowerCase().includes(q)
+  );
+  renderUsers(filtered);
+}
+
+// --- RENDER TABLE & STATS ---
+
 function renderUsers(users) {
-  totalUsers.textContent = users.length;
-  activeFolders.textContent = users.filter(u => u.fileCount >= 0).length;
+  totalUsers.textContent = usersCache.length;
+  activeFolders.textContent = usersCache.filter(u => u.fileCount >= 0).length;
+  lockedCount.textContent = usersCache.filter(u => (u.strikes || 0) >= 3).length;
+
   userTableBody.innerHTML = '';
 
   if (!users.length) {
-    userTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px;">No users found in database.</td></tr>';
+    userTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px;">No accounts found matching filter.</td></tr>';
     return;
   }
 
   users.forEach(u => {
+    const isLocked = (u.strikes || 0) >= 3;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${u.username}</strong></td>
-      <td><span class="pass-code">${u.password}</span></td>
+      <td>
+        <strong>${u.username}</strong>
+        ${isLocked ? '<span class="locked-badge">Locked (3/3)</span>' : ''}
+      </td>
+      <td>
+        <span class="pass-code" style="${isLocked ? 'color:var(--danger); border-color:var(--danger);' : ''}">${u.password}</span>
+      </td>
       <td>${u.fileCount >= 0 ? u.fileCount + ' files' : '<span style="color:var(--danger)">Folder Missing</span>'}</td>
       <td><a class="nav-link" href="${u.folderUrl}" target="_blank">Open Drive ↗</a></td>
       <td>
         <div class="action-group">
           <button class="btn btn-sm btn-outline inspect-btn" data-user="${u.username}" data-folder="${u.folderId}">Inspect</button>
-          <button class="btn btn-sm btn-outline pw-btn" data-user="${u.username}">Reset PW</button>
+          <button class="btn btn-sm ${isLocked ? 'btn-danger' : 'btn-outline'} pw-btn" data-user="${u.username}">
+            ${isLocked ? 'Unlock' : 'Reset PW'}
+          </button>
           <button class="btn btn-sm btn-danger del-btn" data-user="${u.username}">Delete</button>
         </div>
       </td>
@@ -445,7 +546,7 @@ function renderUsers(users) {
     userTableBody.appendChild(tr);
   });
 
-  // Table Handlers
+  // Action listeners
   userTableBody.querySelectorAll('.inspect-btn').forEach(btn => {
     btn.addEventListener('click', () => inspectUser(btn.dataset.user, btn.dataset.folder));
   });
@@ -502,9 +603,9 @@ async function inspectUser(username, folderId) {
 closeModalBtn.addEventListener('click', () => inspectModal.classList.add('hidden'));
 closeModalBtn2.addEventListener('click', () => inspectModal.classList.add('hidden'));
 
-// Change Password Action
+// Change Password & Unlock Action
 async function changePassword(username) {
-  const newPass = prompt(`Enter new password for "${username}":`);
+  const newPass = prompt(`Set new password for "${username}" (this will also reset failed strikes):`);
   if (!newPass || !newPass.trim()) return;
 
   dashStatus.textContent = `Updating password for ${username}...`;
@@ -524,7 +625,7 @@ async function changePassword(username) {
 
 // Delete User & Trash Folder
 async function deleteUser(username) {
-  const confirmDel = confirm(`Are you sure you want to permanently delete user "${username}" and trash their folder from Drive?`);
+  const confirmDel = confirm(`Permanently delete user "${username}" and trash their folder from Drive?`);
   if (!confirmDel) return;
 
   dashStatus.textContent = `Deleting user ${username}...`;
@@ -541,7 +642,7 @@ async function deleteUser(username) {
   loadDashboard(false);
 }
 
-// Auto-login on page load if session is valid
+// Check stored session on launch
 checkAdminSession();
 </script>
 </body>
